@@ -40,13 +40,13 @@ function Login() {
         setLoading(true);
 
         try {
-            const res = await api.post("/api/token/", { username, password });
-            localStorage.setItem(ACCESS_TOKEN, res.data.access);
-            localStorage.setItem(REFRESH_TOKEN, res.data.refresh);
+            const response = await api.post("/api/token/", { username, password });
+            localStorage.setItem(ACCESS_TOKEN, response.data.access);
+            localStorage.setItem(REFRESH_TOKEN, response.data.refresh);
             navigate("/", { replace: true });
         } catch (error) {
             console.error("Login failed:", error);
-            alert("Login failed. Please check your credentials.");
+            alert("Failed to login. Please check your credentials.");
         } finally {
             setLoading(false);
         }

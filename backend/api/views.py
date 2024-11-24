@@ -2,14 +2,19 @@ from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth.models import User
-from .serializers import UserSerializer
+from .models import Profile, Album, FavoriteAlbum
+from .serializers import UserSerializer, ProfileSerializer, AlbumSerializer, FavoriteAlbumSerializer
 import requests
 import os
 from dotenv import load_dotenv
+import logging
 
 # Load environment variables
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 class CreateUserView(generics.CreateAPIView):
     """View for user registration"""
@@ -136,11 +141,157 @@ class SpotifyAlbumView(APIView):
 class UserProfileView(APIView):
     """View for getting user profile information"""
     permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
     
     def get(self, request):
-        user = request.user
-        return Response({
-            'id': user.id,
-            'username': user.username,
-            'date_joined': user.date_joined
-        })
+        try:
+            profile = Profile.objects.get(user=request.user)
+            serializer = ProfileSerializer(profile, context={'request': request})
+            print("Profile data:", serializer.data)  # Debug print
+            return Response(serializer.data)
+        except Profile.DoesNotExist:
+            return Response({'error': 'Profile not found'}, status=404)
+
+    def put(self, request):
+        profile = Profile.objects.get(user=request.user)
+        serializer = ProfileSerializer(profile, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class FavoriteAlbumView(APIView):
+    """View for managing favorite albums"""
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        try:
+            # Debug print the incoming data
+            print("Received data:", request.data)
+            
+            # Validate required fields
+            required_fields = ['spotify_id', 'name', 'artist', 'image_url']
+            for field in required_fields:
+                if field not in request.data:
+                    return Response(
+                        {'error': f'Missing required field: {field}'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            # Check if user already has 4 favorites
+            current_favorites = FavoriteAlbum.objects.filter(user=request.user).count()
+            if current_favorites >= 4:
+                return Response(
+                    {'error': 'Maximum number of favorite albums (4) reached'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Check if album is already a favorite
+            existing_favorite = FavoriteAlbum.objects.filter(
+                user=request.user,
+                spotify_id=request.data['spotify_id']
+            ).first()
+
+            if existing_favorite:
+                return Response(
+                    {'error': 'Album is already in favorites'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Create new favorite
+            favorite = FavoriteAlbum.objects.create(
+                user=request.user,
+                spotify_id=request.data['spotify_id'],
+                name=request.data['name'],
+                artist=request.data['artist'],
+                image_url=request.data['image_url']
+            )
+            
+            return Response({
+                'spotify_id': favorite.spotify_id,
+                'name': favorite.name,
+                'artist': favorite.artist,
+                'image_url': favorite.image_url
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            logger.error(f"Error adding favorite: {str(e)}", exc_info=True)
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def delete(self, request, spotify_id):
+        try:
+            favorite = FavoriteAlbum.objects.get(
+                user=request.user,
+                spotify_id=spotify_id
+            )
+            favorite.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except FavoriteAlbum.DoesNotExist:
+            return Response(
+                {'error': 'Favorite album not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class FollowUserView(APIView):
+    """View for following/unfollowing users"""
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, user_id):
+        try:
+            user_to_follow = User.objects.get(id=user_id)
+            profile = Profile.objects.get(user=request.user)
+            
+            if user_to_follow == request.user:
+                return Response(
+                    {'error': 'You cannot follow yourself'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if user_to_follow in profile.followers.all():
+                profile.followers.remove(user_to_follow)
+                return Response({'message': 'User unfollowed'})
+            else:
+                profile.followers.add(user_to_follow)
+                return Response({'message': 'User followed'})
+                
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class SpotifyAlbumSearchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        query = request.GET.get('query', '')
+        if not query:
+            return Response({'results': []})
+
+        try:
+            # Your Spotify search logic here
+            spotify_results = spotify.search(query, type='album')
+            
+            # Debug print
+            print("Spotify search results:", spotify_results)
+
+            results = []
+            for album in spotify_results['albums']['items']:
+                album_data = {
+                    'spotify_id': album['id'],
+                    'name': album['name'],
+                    'artist': album['artists'][0]['name'] if album['artists'] else 'Unknown Artist',
+                    'image_url': album['images'][0]['url'] if album['images'] else None,
+                }
+                results.append(album_data)
+
+            return Response({'results': results})
+        except Exception as e:
+            logger.error(f"Spotify search error: {str(e)}", exc_info=True)
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

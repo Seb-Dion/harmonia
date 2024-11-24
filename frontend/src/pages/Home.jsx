@@ -7,19 +7,19 @@ function Home() {
     const [searchQuery, setSearchQuery] = useState('');
     const [albums, setAlbums] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [user, setUser] = useState('User');
+    const [profile, setProfile] = useState(null);
 
     useEffect(() => {
-        const fetchUserData = async () => {
+        const fetchProfile = async () => {
             try {
                 const response = await api.get('/api/user/profile/');
-                setUser(response.data.username);
+                setProfile(response.data);
             } catch (error) {
-                console.error('Failed to fetch user data:', error);
+                console.error('Failed to fetch profile:', error);
             }
         };
 
-        fetchUserData();
+        fetchProfile();
     }, []);
 
     const handleSearch = async (e) => {
@@ -42,7 +42,7 @@ function Home() {
     return (
         <div className="home-container">
             <header className="header">
-                <h1>Welcome, {user}!</h1>
+                <h1>Welcome, {profile?.username || 'User'}!</h1>
             </header>
 
             <div className="search-container">
