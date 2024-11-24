@@ -1,0 +1,51 @@
+:root {
+    /* Main Colors - Dark Theme with Purple Accent */
+    --color-primary: #9D4EDD;    /* Bright Purple */
+    --color-secondary: #6C2BD9;  /* Deep Purple */
+    
+    /* Text Colors */
+    --color-text: #FFFFFF;      /* White text for dark backgrounds */
+    --color-text-muted: #A0AEC0; /* Muted gray text */
+    --color-text-light: #F7FAFC; /* Very light text */
+    
+    /* Background Colors */
+    --color-bg: #0F172A;        /* Very dark blue-gray background */
+    --color-bg-elevated: #1E293B; /* Slightly lighter background for cards */
+    --color-bg-highlight: #2D3748; /* Highlight/hover background */
+    
+    /* Accent Colors */
+    --color-success: #10B981;   /* Green */
+    --color-error: #EF4444;     /* Red */
+    --color-warning: #F59E0B;   /* Amber */
+    
+    /* Interactive Colors */
+    --color-hover: #2D3748;     /* Hover state */
+    --color-active: #374151;    /* Active/pressed state */
+    --color-border: #334155;    /* Subtle borders */
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #9D4EDD, #6C2BD9);
+    --gradient-dark: linear-gradient(135deg, #0F172A, #1E293B);
+    --gradient-hero: linear-gradient(180deg, rgba(157, 78, 221, 0.1) 0%, #0F172A 100%);
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+    
+    /* Font */
+    --font-primary: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-heading: 'Playfair Display', serif;
+    --font-body: 'Source Sans Pro', sans-serif;
+    
+    /* Transitions */
+    --transition-quick: 0.1s ease;
+    --transition-normal: 0.2s ease;
+    --transition-slow: 0.3s ease;
+    
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-full: 9999px;
+}

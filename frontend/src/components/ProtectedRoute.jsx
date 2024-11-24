@@ -32,18 +32,11 @@ function ProtectedRoute({ children }) {
 
     const auth = async () => {
         const token = localStorage.getItem(ACCESS_TOKEN);
-        console.log('Checking token:', token);
-        
         if (!token) {
-            console.log('No token found');
             setIsAuthorized(false);
             return;
         }
-        
         const decoded = jwtDecode(token);
-        console.log('Token expiration:', decoded.exp);
-        console.log('Current time:', Date.now() / 1000);
-        
         const tokenExpiration = decoded.exp;
         const now = Date.now() / 1000;
 
