@@ -8,6 +8,9 @@
     color: var(--color-text);
     padding: 20px;
     font-family: var(--font-primary);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
 }
 
 /* Header section */
@@ -200,4 +203,211 @@
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+.hero-section {
+    text-align: center;
+    padding: 4rem 0;
+    margin-bottom: 3rem;
+}
+
+.hero-section h1 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: var(--color-text);
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 0.75rem 1.5rem;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    gap: 1rem;
+}
+
+.search-bar input {
+    flex: 1;
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    color: var(--color-text);
+}
+
+.search-bar button {
+    padding: 0.5rem 1rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.search-bar button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.album-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 2rem;
+    padding: 1rem;
+}
+
+.album-card {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+}
+
+.album-cover {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+}
+
+.album-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    color: white;
+}
+
+.album-info h3 {
+    font-size: 1rem;
+    margin: 0;
+    margin-bottom: 0.25rem;
+}
+
+.album-info p {
+    font-size: 0.9rem;
+    margin: 0;
+    opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+    .home-container {
+        padding: 1rem;
+    }
+
+    .hero-section {
+        padding: 2rem 0;
+    }
+
+    .hero-section h1 {
+        font-size: 2rem;
+    }
+
+    .album-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 4rem 0;
+    color: var(--color-text-muted);
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.album-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 2rem;
+    padding: 1rem;
+}
+
+.album-card {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    transition: transform 0.2s ease;
+}
+
+.album-cover {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+}
+
+.album-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    color: white;
+}
+
+.album-info h3 {
+    font-size: 1rem;
+    margin: 0;
+    margin-bottom: 0.25rem;
+}
+
+.album-info p {
+    font-size: 0.9rem;
+    margin: 0;
+    opacity: 0.8;
+}
+
+.rating {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+}
+
+.error-message {
+    background: var(--color-error-bg);
+    color: var(--color-error);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    margin: 1rem auto;
+    max-width: 600px;
+}
+
+@media (max-width: 768px) {
+    .home-container {
+        padding: 1rem;
+    }
+
+    .hero-section {
+        padding: 2rem 0;
+    }
+
+    .hero-section h1 {
+        font-size: 2rem;
+    }
+
+    .album-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+    }
 }

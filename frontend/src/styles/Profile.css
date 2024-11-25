@@ -104,25 +104,20 @@
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1rem;
     margin-top: 1rem;
+    padding: 0.5rem;
 }
 
 .album-card {
     position: relative;
-    border-radius: var(--radius-md);
     overflow: hidden;
-    aspect-ratio: 1;
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    transition: transform var(--transition-normal);
-}
-
-.album-card:hover {
-    transform: translateY(-4px);
+    border-radius: 8px;
+    background: var(--color-bg-elevated);
+    transition: transform 0.2s ease;
 }
 
 .album-cover {
     width: 100%;
-    height: 100%;
+    aspect-ratio: 1;
     object-fit: cover;
 }
 
@@ -133,22 +128,39 @@
     right: 0;
     padding: 1rem;
     background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-    color: var(--color-text);
+    color: white;
 }
 
-.album-title {
-    font-family: var(--font-heading);
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--color-text);
+.album-info h4 {
     margin: 0;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
 }
 
-.album-artist {
-    font-family: var(--font-body);
-    font-size: 0.9rem;
-    color: var(--color-text-muted);
-    margin: 0.25rem 0 0;
+.album-info p {
+    margin: 0;
+    font-size: 0.875rem;
+    opacity: 0.8;
+}
+
+.remove-favorite {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+}
+
+.remove-favorite:hover {
+    transform: scale(1.1);
+}
+
+.favorite-icon {
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
 }
 
 /* Form Styles */
@@ -279,6 +291,7 @@
     color: var(--color-text-muted);
     cursor: pointer;
     transition: all var(--transition-normal);
+    will-change: transform;
 }
 
 .add-favorite-button:hover {
@@ -295,6 +308,7 @@
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -375,29 +389,6 @@
     margin: 0.25rem 0 0;
 }
 
-.remove-favorite {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    background: var(--color-error);
-    color: white;
-    border: none;
-    border-radius: var(--radius-full);
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity var(--transition-normal);
-}
-
-.album-card:hover .remove-favorite {
-    opacity: 1;
-}
-
-/* Add these to your existing styles */
 .no-results {
     text-align: center;
     padding: 2rem;
@@ -450,4 +441,118 @@
     font-size: 0.9rem;
     color: var(--color-text-muted);
     margin-left: 0.5rem;
+}
+
+.search-section {
+    margin-bottom: 2rem;
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 0.75rem 1.5rem;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    gap: 1rem;
+}
+
+.search-bar input {
+    flex: 1;
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    color: var(--color-text);
+}
+
+.search-bar button {
+    padding: 0.5rem 1rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.search-bar button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.album-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 2rem;
+    padding: 1rem;
+}
+
+.album-card {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    transition: transform 0.2s ease;
+}
+
+.album-cover {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+}
+
+.album-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    color: white;
+}
+
+.error-message {
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 10px;
+    margin: 10px 0;
+    text-align: center;
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.no-favorites {
+    text-align: center;
+    color: var(--color-text-muted);
+    margin: 2rem 0;
+}
+
+.favorite-icon {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    color: var(--color-primary);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 0.5rem;
+    border-radius: 50%;
+}
+
+.album-card.favorite .album-info {
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
 }

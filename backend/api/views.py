@@ -1,297 +1,237 @@
-from rest_framework import generics, status
-from rest_framework.views import APIView
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404
+from django.db.models import Avg
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+from django.conf import settings
+from .models import Album, Log, Profile, FavoriteAlbum
+from .serializers import (
+    UserSerializer,
+    ProfileSerializer,
+    AlbumSerializer,
+    LogSerializer,
+    FavoriteAlbumSerializer
+)
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.contrib.auth.models import User
-from .models import Profile, Album, FavoriteAlbum
-from .serializers import UserSerializer, ProfileSerializer, AlbumSerializer, FavoriteAlbumSerializer
-import requests
-import os
-from dotenv import load_dotenv
-import logging
 
-# Load environment variables
-load_dotenv()
-
-logger = logging.getLogger(__name__)
-
-class CreateUserView(generics.CreateAPIView):
-    """View for user registration"""
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [AllowAny]
-
-class SpotifyAlbumView(APIView):
-    """View for searching Spotify albums"""
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request):
-        # Get credentials from environment variables
-        client_id = os.getenv('SPOTIFY_CLIENT_ID')
-        client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
-        
-        # Debug logging
-        print(f"Client ID exists: {client_id is not None}")
-        print(f"Client Secret exists: {client_secret is not None}")
-        
-        try:
-            # Get Spotify access token
-            auth_response = requests.post('https://accounts.spotify.com/api/token', {
-                'grant_type': 'client_credentials',
-                'client_id': client_id,
-                'client_secret': client_secret,
-            })
-            auth_response.raise_for_status()
-            
-            # Debug logging
-            print(f"Auth response status: {auth_response.status_code}")
-            print(f"Auth response content: {auth_response.content}")
-            
-            spotify_token = auth_response.json()['access_token']
-            
-            # Get search query from request
-            query = request.query_params.get('query', '')
-            print(f"Search query: {query}")  # Debug logging
-            
-            if not query:
-                return Response(
-                    {'error': 'Query parameter is required'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Search Spotify
-            headers = {
-                'Authorization': f'Bearer {spotify_token}'
-            }
-            
-            search_response = requests.get(
-                'https://api.spotify.com/v1/search',
-                headers=headers,
-                params={
-                    'q': query,
-                    'type': 'album',
-                    'limit': 20
-                }
-            )
-            search_response.raise_for_status()
-            
-            # Debug logging
-            print(f"Search response status: {search_response.status_code}")
-            print(f"Search response content: {search_response.content[:200]}")  # First 200 chars
-            
-            # Extract just the albums from the response
-            response_data = search_response.json()
-            if 'albums' not in response_data:
-                print(f"Response data keys: {response_data.keys()}")  # Debug logging
-                return Response(
-                    {'error': 'Unexpected API response format'},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-                
-            albums = response_data.get('albums', {}).get('items', [])
-            
-            # Format the response
-            formatted_albums = []
-            for album in albums:
-                if not album:  # Skip if album is None
-                    continue
-                    
-                try:
-                    formatted_albums.append({
-                        'id': album.get('id'),
-                        'name': album.get('name'),
-                        'artist': album.get('artists', [{}])[0].get('name'),
-                        'image_url': album.get('images', [{}])[0].get('url') if album.get('images') else None,
-                        'release_date': album.get('release_date'),
-                        'total_tracks': album.get('total_tracks'),
-                        'external_url': album.get('external_urls', {}).get('spotify')
-                    })
-                except (KeyError, IndexError, AttributeError) as e:
-                    print(f"Error formatting album: {e}")
-                    print(f"Album data: {album}")
-                    continue
-            
-            return Response({
-                'albums': formatted_albums,
-                'total': len(formatted_albums)
-            })
-            
-        except requests.exceptions.RequestException as e:
-            print(f"Request error: {str(e)}")  # Debug logging
-            return Response(
-                {'error': f'Spotify API error: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        except KeyError as e:
-            print(f"Key error: {str(e)}")  # Debug logging
-            return Response(
-                {'error': f'Unexpected response format: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        except Exception as e:
-            print(f"Unexpected error: {str(e)}")  # Debug logging
-            import traceback
-            print(traceback.format_exc())  # Print full traceback
-            return Response(
-                {'error': f'Unexpected error: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+class CreateUserView(APIView):
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            Profile.objects.create(user=user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserProfileView(APIView):
-    """View for getting user profile information"""
     permission_classes = [IsAuthenticated]
-    parser_classes = (MultiPartParser, FormParser)
-    
-    def get(self, request):
-        try:
-            profile = Profile.objects.get(user=request.user)
-            serializer = ProfileSerializer(profile, context={'request': request})
-            print("Profile data:", serializer.data)  # Debug print
-            return Response(serializer.data)
-        except Profile.DoesNotExist:
-            return Response({'error': 'Profile not found'}, status=404)
+    parser_classes = [MultiPartParser, FormParser]
 
-    def put(self, request):
-        profile = Profile.objects.get(user=request.user)
-        serializer = ProfileSerializer(profile, data=request.data, partial=True, context={'request': request})
+    def get(self, request):
+        profile = request.user.profile
+        favorites = FavoriteAlbum.objects.filter(user=request.user)
+        print(f"Found {favorites.count()} favorites for user {request.user.username}")
+        for fav in favorites:
+            print(f"Favorite: {fav.album.name} by {fav.album.artist}")
+        
+        serializer = ProfileSerializer(profile, context={'request': request})
+        return Response(serializer.data)
+
+    def patch(self, request):
+        profile = request.user.profile
+        print("Received data:", request.data)
+        print("Files:", request.FILES)
+        
+        serializer = ProfileSerializer(
+            profile,
+            data=request.data,
+            partial=True,
+            context={'request': request}
+        )
+        
+        if serializer.is_valid():
+            print("Valid data:", serializer.validated_data)
+            serializer.save()
+            profile.refresh_from_db()
+            return Response(
+                ProfileSerializer(profile, context={'request': request}).data
+            )
+        print("Validation errors:", serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+def spotify_search(request):
+    query = request.GET.get('q', '')
+    if not query:
+        return Response({'error': 'No search query provided'}, status=400)
+
+    try:
+        spotify = spotipy.Spotify(
+            client_credentials_manager=SpotifyClientCredentials(
+                client_id=settings.SPOTIFY_CLIENT_ID,
+                client_secret=settings.SPOTIFY_CLIENT_SECRET
+            )
+        )
+        
+        results = spotify.search(q=query, type='album', limit=20)
+        return Response(results)
+    except Exception as e:
+        print(f"Spotify search error: {str(e)}")
+        return Response({'error': str(e)}, status=500)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_favorite_album(request):
+    try:
+        print("Received data:", request.data)  # Debug log
+        
+        # Validate required fields
+        required_fields = ['spotify_id', 'name', 'artist', 'release_date']
+        for field in required_fields:
+            if field not in request.data:
+                return Response(
+                    {'error': f'Missing required field: {field}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # First, get or create the album
+        album_data = {
+            'spotify_id': request.data['spotify_id'],
+            'name': request.data['name'],
+            'artist': request.data['artist'],
+            'image_url': request.data.get('image_url'),
+            'release_date': request.data.get('release_date'),
+            'external_url': request.data.get('external_url'),
+            'genres': request.data.get('genres', '')
+        }
+        
+        print("Album data:", album_data)  # Debug log
+        
+        album, created = Album.objects.get_or_create(
+            spotify_id=album_data['spotify_id'],
+            defaults=album_data
+        )
+        print(f"Album {'created' if created else 'found'}:", album)  # Debug log
+
+        # Check if user already has 4 favorites
+        existing_favorites = FavoriteAlbum.objects.filter(user=request.user).count()
+        if existing_favorites >= 4:
+            return Response(
+                {'error': 'Maximum number of favorites (4) reached'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Then create the favorite
+        favorite, created = FavoriteAlbum.objects.get_or_create(
+            user=request.user,
+            album=album
+        )
+
+        if not created:
+            return Response(
+                {'message': 'Album already in favorites'},
+                status=status.HTTP_200_OK
+            )
+
+        serializer = FavoriteAlbumSerializer(favorite)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    except KeyError as e:
+        return Response(
+            {'error': f'Missing required field: {str(e)}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_favorite_albums(request):
+    favorites = FavoriteAlbum.objects.filter(user=request.user)
+    print("Found favorites:", favorites.count())  # Debug log
+    for fav in favorites:
+        print(f"Favorite: {fav.album.name} by {fav.album.artist}")  # Debug log
+    serializer = FavoriteAlbumSerializer(favorites, many=True)
+    print("Serialized data:", serializer.data)  # Debug log
+    return Response(serializer.data)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_favorite_album(request, album_id):
+    try:
+        if not album_id or album_id == 'undefined':
+            return Response(
+                {'error': 'Invalid album ID'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        favorite = FavoriteAlbum.objects.get(
+            user=request.user,
+            album__spotify_id=album_id
+        )
+        favorite.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    except FavoriteAlbum.DoesNotExist:
+        return Response(
+            {'error': 'Album not in favorites'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+class LogAlbumView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = LogSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):
+        logs = Log.objects.filter(user=request.user)
+        serializer = LogSerializer(logs, many=True)
+        return Response(serializer.data)
+
+class LogDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, log_id):
+        log = get_object_or_404(Log, id=log_id, user=request.user)
+        serializer = LogSerializer(log)
+        return Response(serializer.data)
+
+    def put(self, request, log_id):
+        log = get_object_or_404(Log, id=log_id, user=request.user)
+        serializer = LogSerializer(log, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class FavoriteAlbumView(APIView):
-    """View for managing favorite albums"""
-    permission_classes = [IsAuthenticated]
-    
-    def post(self, request):
-        try:
-            # Debug print the incoming data
-            print("Received data:", request.data)
-            
-            # Validate required fields
-            required_fields = ['spotify_id', 'name', 'artist', 'image_url']
-            for field in required_fields:
-                if field not in request.data:
-                    return Response(
-                        {'error': f'Missing required field: {field}'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+    def delete(self, request, log_id):
+        log = get_object_or_404(Log, id=log_id, user=request.user)
+        log.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-            # Check if user already has 4 favorites
-            current_favorites = FavoriteAlbum.objects.filter(user=request.user).count()
-            if current_favorites >= 4:
-                return Response(
-                    {'error': 'Maximum number of favorite albums (4) reached'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Check if album is already a favorite
-            existing_favorite = FavoriteAlbum.objects.filter(
-                user=request.user,
-                spotify_id=request.data['spotify_id']
-            ).first()
-
-            if existing_favorite:
-                return Response(
-                    {'error': 'Album is already in favorites'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Create new favorite
-            favorite = FavoriteAlbum.objects.create(
-                user=request.user,
-                spotify_id=request.data['spotify_id'],
-                name=request.data['name'],
-                artist=request.data['artist'],
-                image_url=request.data['image_url']
-            )
-            
-            return Response({
-                'spotify_id': favorite.spotify_id,
-                'name': favorite.name,
-                'artist': favorite.artist,
-                'image_url': favorite.image_url
-            }, status=status.HTTP_201_CREATED)
-
-        except Exception as e:
-            logger.error(f"Error adding favorite: {str(e)}", exc_info=True)
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-    def delete(self, request, spotify_id):
-        try:
-            favorite = FavoriteAlbum.objects.get(
-                user=request.user,
-                spotify_id=spotify_id
-            )
-            favorite.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except FavoriteAlbum.DoesNotExist:
-            return Response(
-                {'error': 'Favorite album not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-class FollowUserView(APIView):
-    """View for following/unfollowing users"""
-    permission_classes = [IsAuthenticated]
-    
-    def post(self, request, user_id):
-        try:
-            user_to_follow = User.objects.get(id=user_id)
-            profile = Profile.objects.get(user=request.user)
-            
-            if user_to_follow == request.user:
-                return Response(
-                    {'error': 'You cannot follow yourself'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            if user_to_follow in profile.followers.all():
-                profile.followers.remove(user_to_follow)
-                return Response({'message': 'User unfollowed'})
-            else:
-                profile.followers.add(user_to_follow)
-                return Response({'message': 'User followed'})
-                
-        except User.DoesNotExist:
-            return Response(
-                {'error': 'User not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-class SpotifyAlbumSearchView(APIView):
+class UserStatsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        query = request.GET.get('query', '')
-        if not query:
-            return Response({'results': []})
-
-        try:
-            # Your Spotify search logic here
-            spotify_results = spotify.search(query, type='album')
-            
-            # Debug print
-            print("Spotify search results:", spotify_results)
-
-            results = []
-            for album in spotify_results['albums']['items']:
-                album_data = {
-                    'spotify_id': album['id'],
-                    'name': album['name'],
-                    'artist': album['artists'][0]['name'] if album['artists'] else 'Unknown Artist',
-                    'image_url': album['images'][0]['url'] if album['images'] else None,
-                }
-                results.append(album_data)
-
-            return Response({'results': results})
-        except Exception as e:
-            logger.error(f"Spotify search error: {str(e)}", exc_info=True)
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        logs = Log.objects.filter(user=request.user)
+        
+        stats = {
+            'total_albums': logs.count(),
+            'average_rating': logs.aggregate(Avg('rating'))['rating__avg'] or 0,
+            'total_relistens': logs.filter(relisten=True).count(),
+            'ratings_distribution': {
+                '5': logs.filter(rating=5).count(),
+                '4': logs.filter(rating=4).count(),
+                '3': logs.filter(rating=3).count(),
+                '2': logs.filter(rating=2).count(),
+                '1': logs.filter(rating=1).count(),
+            }
+        }
+        
+        return Response(stats)

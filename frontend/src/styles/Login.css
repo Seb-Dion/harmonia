@@ -30,26 +30,16 @@
     background-position: center;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    animation: floatAlbum 25s linear infinite;
     opacity: 0.6;
     transition: opacity 0.3s ease;
+    animation: floatAlbum 25s linear infinite;
 }
 
 .album-float:hover {
     opacity: 1;
 }
 
-/* Position albums at different starting points */
-.album-float:nth-child(1) { left: 10%; width: 120px; height: 120px; }
-.album-float:nth-child(2) { left: 20%; width: 90px; height: 90px; }
-.album-float:nth-child(3) { left: 35%; width: 150px; height: 150px; }
-.album-float:nth-child(4) { left: 50%; width: 100px; height: 100px; }
-.album-float:nth-child(5) { left: 65%; width: 130px; height: 130px; }
-.album-float:nth-child(6) { left: 75%; width: 110px; height: 110px; }
-.album-float:nth-child(7) { left: 85%; width: 140px; height: 140px; }
-.album-float:nth-child(8) { left: 90%; width: 95px; height: 95px; }
-.album-float:nth-child(9) { left: 95%; width: 125px; height: 125px; }
-
+/* Add back the float animation */
 @keyframes floatAlbum {
     0% {
         transform: translateY(100vh) rotate(0deg);
@@ -63,6 +53,17 @@
         opacity: 0.6;
     }
 }
+
+/* Update album positions with animation delays */
+.album-float:nth-child(1) { left: 10%; width: 120px; height: 120px; animation-delay: 0s; }
+.album-float:nth-child(2) { left: 20%; width: 90px; height: 90px; animation-delay: -2s; }
+.album-float:nth-child(3) { left: 35%; width: 150px; height: 150px; animation-delay: -4s; }
+.album-float:nth-child(4) { left: 50%; width: 100px; height: 100px; animation-delay: -6s; }
+.album-float:nth-child(5) { left: 65%; width: 130px; height: 130px; animation-delay: -8s; }
+.album-float:nth-child(6) { left: 75%; width: 110px; height: 110px; animation-delay: -10s; }
+.album-float:nth-child(7) { left: 85%; width: 140px; height: 140px; animation-delay: -12s; }
+.album-float:nth-child(8) { left: 90%; width: 95px; height: 95px; animation-delay: -14s; }
+.album-float:nth-child(9) { left: 95%; width: 125px; height: 125px; animation-delay: -16s; }
 
 /* Login Card */
 .login-card {
@@ -78,7 +79,6 @@
     border-radius: var(--radius-lg);
     border: 1px solid rgba(255, 255, 255, 0.1);
     overflow: hidden;
-    animation: fadeIn 0.5s ease-out;
 }
 
 .brand {
@@ -89,10 +89,6 @@
         rgba(157, 78, 221, 0.6),
         rgba(108, 43, 217, 0.6)
     );
-}
-
-.brand-icon {
-    animation: float 3s ease-in-out infinite;
 }
 
 .brand h1 {
@@ -198,27 +194,7 @@ input:focus {
     text-decoration: underline;
 }
 
-/* Animations */
-@keyframes float {
-    0%, 100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-10px);
-    }
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
+/* Animations - Keep only the spin animation for the loading icon */
 .spin-icon {
     animation: spin 1s linear infinite;
 }

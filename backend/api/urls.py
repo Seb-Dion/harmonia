@@ -1,25 +1,36 @@
 from django.urls import path
-from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (
-    CreateUserView, 
-    UserProfileView, 
-    SpotifyAlbumView,
-    FavoriteAlbumView,
-    FollowUserView
+    CreateUserView,
+    UserProfileView,
+    spotify_search,
+    add_favorite_album,
+    list_favorite_albums,
+    remove_favorite_album,
+    LogAlbumView,
+    LogDetailView,
+    UserStatsView
 )
 
-# Router for ViewSets
-router = DefaultRouter()
-
-
-# URL patterns for API views
 urlpatterns = [
-    path('spotify/albums/', SpotifyAlbumView.as_view(), name='spotify-albums'),
-    path('user/profile/', UserProfileView.as_view(), name='user-profile'),
-    path('user/favorites/', FavoriteAlbumView.as_view(), name='favorite-albums'),
-    path('user/favorites/<str:spotify_id>/', FavoriteAlbumView.as_view(), name='favorite-album-detail'),
-    path('user/follow/<int:user_id>/', FollowUserView.as_view(), name='follow-user'),
+    # Authentication endpoints
+    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # User endpoints
+    path('register/', CreateUserView.as_view(), name='register'),
+    path('profile/', UserProfileView.as_view(), name='profile'),
+    path('stats/', UserStatsView.as_view(), name='user-stats'),
+    
+    # Spotify search
+    path('spotify/search/', spotify_search, name='spotify-search'),
+    
+    # Favorite albums endpoints
+    path('favorites/', list_favorite_albums, name='favorite-albums'),
+    path('favorites/add/', add_favorite_album, name='add-favorite'),
+    path('favorites/<str:album_id>/', remove_favorite_album, name='remove-favorite'),
+    
+    # Logging endpoints
+    path('logs/', LogAlbumView.as_view(), name='album-logs'),
+    path('logs/<int:log_id>/', LogDetailView.as_view(), name='log-detail'),
 ]
-
-# Include ViewSet routes from the router
-urlpatterns += router.urls
