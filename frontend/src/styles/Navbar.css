@@ -39,6 +39,7 @@
     transition: none;
     position: relative;
     z-index: 1;
+    border-radius: 8px;
 }
 
 .navbar-link:hover {

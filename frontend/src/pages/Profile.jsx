@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { User, Edit, Music, Save, X, Plus, Search, Loader, Heart } from "lucide-react";
+import { User, Edit, Music, Save, X, Plus, Search, Loader, Heart, Logs } from "lucide-react";
 import api from "../api/api";
 import "../styles/Profile.css";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,16 +17,34 @@ function Profile() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [error, setError] = useState(null);
   const [favoriteAlbums, setFavoriteAlbums] = useState([]);
+  const [activeTab, setActiveTab] = useState('profile');
+  const [stats, setStats] = useState({
+    totalLogs: 0,
+    thisYear: 0,
+    favorites: 0
+  });
+  const [recentLogs, setRecentLogs] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log("Fetching profile and favorites...");
-        const profileRes = await api.get("/api/user/profile/");
+        console.log("Fetching profile data...");
+        const [profileRes, favoritesRes] = await Promise.all([
+          api.get("/api/user/profile/"),
+          getFavorites()
+        ]);
+        
         console.log("Profile response:", profileRes.data);
+        console.log("Favorites response:", favoritesRes);
         
         setProfile(profileRes.data);
-        setFavoriteAlbums(profileRes.data.favorite_albums || []);
+        setFavoriteAlbums(favoritesRes || []);
+        setStats({
+          totalLogs: profileRes.data.total_logs || 0,
+          thisYear: profileRes.data.logs_this_year || 0,
+          favorites: profileRes.data.favorite_albums?.length || 0
+        });
+        
         setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -241,221 +259,291 @@ function Profile() {
     <div className="profile-container">
       <div className="profile-header">
         <div className="profile-avatar">
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt="Profile" />
-          ) : (
-            <User size={64} />
-          )}
+          <img src={profile?.avatar_url || defaultAvatar} alt="Profile" />
         </div>
+        
         <div className="profile-info">
           <h1 className="profile-username">{profile?.username}</h1>
-          <div className="profile-stats">
-            <div className="stat-item">
-              <div className="stat-value">{profile?.followers_count || 0}</div>
-              <div className="stat-label">Followers</div>
-            </div>
+          <p className="bio-text">{profile?.bio}</p>
+        </div>
+        
+        <div className="profile-stats">
+          <div className="stat-item">
+            <div className="stat-value">{stats.totalLogs}</div>
+            <div className="stat-label">Albums</div>
           </div>
-          {!editing && (
-            <button className="edit-button" onClick={() => setEditing(true)}>
-              <Edit size={20} />
-              Edit Profile
-            </button>
-          )}
+          <div className="stat-item">
+            <div className="stat-value">{stats.thisYear}</div>
+            <div className="stat-label">This Year</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">{stats.favorites}</div>
+            <div className="stat-label">Favorites</div>
+          </div>
         </div>
       </div>
 
-      <div className="profile-content">
-        <div className="profile-section">
-          {editing ? (
-            <form className="edit-form" onSubmit={handleUpdateProfile}>
-              <div className="form-group">
-                <label>Profile Picture</label>
-                <input
-                  type="file"
-                  onChange={handleAvatarChange}
-                  accept="image/*"
-                />
-              </div>
-              <div className="form-group">
-                <label>Bio</label>
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Tell us about yourself..."
-                  rows={4}
-                />
-              </div>
-              <div className="form-actions">
-                <button type="submit" className="save-button">
-                  <Save size={20} />
-                  Save Changes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditing(false);
-                    setBio(profile?.bio || "");
-                  }}
-                  className="cancel-button"
-                >
-                  <X size={20} />
-                  Cancel
-                </button>
-              </div>
-            </form>
-          ) : (
-            <>
-              <h2 className="section-title">
-                <User size={24} />
-                Bio
-              </h2>
-              <p className="bio-text">
-                {profile?.bio ? profile.bio : "No bio yet"}
-              </p>
-            </>
-          )}
-        </div>
+      <nav className="profile-nav">
+        <button className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+                onClick={() => setActiveTab('profile')}>
+          Profile
+        </button>
+        <button className={`nav-item ${activeTab === 'activity' ? 'active' : ''}`}
+                onClick={() => setActiveTab('activity')}>
+          Activity
+        </button>
+        <button className={`nav-item ${activeTab === 'favorites' ? 'active' : ''}`}
+                onClick={() => setActiveTab('favorites')}>
+          Favorites
+        </button>
+      </nav>
 
-        <div className="profile-section">
-          <h2 className="section-title">
-            <Music size={24} />
-            Favorite Albums
-            <span className="album-count">
-              ({profile?.favorite_albums?.length || 0}/4)
-            </span>
-          </h2>
-          <motion.div className="favorite-albums" layout>
-            <AnimatePresence mode="popLayout">
-              {console.log("Current favorites:", favoriteAlbums)}
-              {Array.isArray(favoriteAlbums) && favoriteAlbums.length > 0 ? (
-                favoriteAlbums.map((favorite) => (
-                  <motion.div
-                    key={`favorite-${favorite.album.spotify_id}`}
-                    className="album-card"
-                    layout
-                  >
-                    <motion.img
-                      src={favorite.album.image_url || '/default-album-cover.png'}
-                      alt={`${favorite.album.name} by ${favorite.album.artist}`}
-                      className="album-cover"
-                    />
-                    <motion.div className="album-info">
-                      <h3>{favorite.album.name}</h3>
-                      <p>{favorite.album.artist}</p>
-                    </motion.div>
-                    <motion.button
-                      className="remove-favorite"
-                      onClick={() => handleRemoveFavorite(favorite.album.spotify_id)}
-                    >
-                      <X size={16} />
-                    </motion.button>
-                  </motion.div>
-                ))
-              ) : (
-                <div className="no-favorites">
-                  No favorite albums yet
+      {activeTab === 'profile' && (
+        <div className="profile-content">
+          <div className="profile-section">
+            {editing ? (
+              <form className="edit-form" onSubmit={handleUpdateProfile}>
+                <div className="form-group">
+                  <label>Profile Picture</label>
+                  <input
+                    type="file"
+                    onChange={handleAvatarChange}
+                    accept="image/*"
+                  />
                 </div>
-              )}
-              
-              {favoriteAlbums.length < 4 && (
-                <motion.button
-                  key="add-favorite-button"
-                  className="add-favorite-button"
-                  onClick={() => setShowAlbumSearch(true)}
+                <div className="form-group">
+                  <label>Recent Reviews</label>
+                  <textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Tell us about yourself..."
+                    rows={4}
+                  />
+                </div>
+                <div className="form-actions">
+                  <button type="submit" className="save-button">
+                    <Save size={20} />
+                    Save Changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditing(false);
+                      setBio(profile?.bio || "");
+                    }}
+                    className="cancel-button"
+                  >
+                    <X size={20} />
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <h2 className="section-title">
+                  <Logs size={24} />
+                  Recent Reviews
+                </h2>
+                <p className="bio-text">
+                  {profile?.bio ? profile.bio : "No bio yet"}
+                </p>
+              </>
+            )}
+          </div>
+
+          <div className="profile-section">
+            <h2 className="section-title">
+              <Music size={24} />
+              Favorite Albums
+              <span className="album-count">
+                ({favoriteAlbums?.length || 0}/4)
+              </span>
+            </h2>
+            <motion.div className="favorite-albums" layout>
+              <AnimatePresence mode="popLayout">
+                {console.log("Current favorites:", favoriteAlbums)}
+                {Array.isArray(favoriteAlbums) && favoriteAlbums.length > 0 ? (
+                  favoriteAlbums.map((favorite) => (
+                    <motion.div
+                      key={favorite.album.spotify_id}
+                      className="album-card"
+                      layout
+                    >
+                      <img
+                        src={favorite.album.image_url || '/default-album-cover.png'}
+                        alt={`${favorite.album.name} by ${favorite.album.artist}`}
+                        className="album-cover"
+                      />
+                      <div className="album-info">
+                        <h3>{favorite.album.name}</h3>
+                        <p>{favorite.album.artist}</p>
+                      </div>
+                      <motion.button
+                        className="remove-favorite"
+                        onClick={() => handleRemoveFavorite(favorite.album.spotify_id)}
+                      >
+                        <X size={16} />
+                      </motion.button>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="no-favorites">
+                    No favorite albums yet
+                  </div>
+                )}
+                
+                {favoriteAlbums.length < 4 && (
+                  <motion.button
+                    key="add-favorite-button"
+                    className="add-favorite-button"
+                    onClick={() => setShowAlbumSearch(true)}
+                  >
+                    <Plus size={24} />
+                    Add Favorite
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            <AnimatePresence>
+              {showAlbumSearch && (
+                <motion.div
+                  key="search-modal"
+                  className="album-search-modal"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                 >
-                  <Plus size={24} />
-                  Add Favorite
-                </motion.button>
+                  <motion.div
+                    className="modal-content"
+                    initial={{ y: 50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 50, opacity: 0 }}
+                    transition={{ type: "spring", damping: 25 }}
+                  >
+                    <div className="modal-header">
+                      <h3>Search Albums</h3>
+                      <button
+                        className="close-button"
+                        onClick={() => {
+                          setShowAlbumSearch(false);
+                          setSearchResults([]);
+                          setSearchQuery("");
+                        }}
+                      >
+                        <X size={24} />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSearch} className="search-form">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search for albums..."
+                      />
+                      <button type="submit">
+                        <Search size={20} />
+                      </button>
+                    </form>
+
+                    <div className="search-results">
+                      {searchLoading ? (
+                        <div className="loading">Searching...</div>
+                      ) : Array.isArray(searchResults) && searchResults.length > 0 ? (
+                        searchResults
+                          .filter(album => album && album.id)
+                          .map((album) => (
+                            <div
+                              key={`search-${album.id}-${Date.now()}`}
+                              className="search-result-item"
+                            >
+                              <img
+                                src={getAlbumImageUrl(album)}
+                                alt={getAlbumName(album)}
+                                onError={(e) => {
+                                  e.target.src = "/default-album-cover.png";
+                                }}
+                              />
+                              <div className="result-info">
+                                <h4>{getAlbumName(album)}</h4>
+                                <p>{getArtistName(album)}</p>
+                              </div>
+                              <button
+                                className="add-button"
+                                onClick={() => handleAddFavorite(album)}
+                              >
+                                <Plus size={20} />
+                              </button>
+                            </div>
+                          ))
+                      ) : (
+                        <div className="no-results">
+                          {searchQuery.trim()
+                            ? "No albums found"
+                            : "Search for albums to add to your favorites"}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                </motion.div>
               )}
             </AnimatePresence>
-          </motion.div>
-
-          <AnimatePresence>
-            {showAlbumSearch && (
-              <motion.div
-                key="search-modal"
-                className="album-search-modal"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                <motion.div
-                  className="modal-content"
-                  initial={{ y: 50, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 50, opacity: 0 }}
-                  transition={{ type: "spring", damping: 25 }}
-                >
-                  <div className="modal-header">
-                    <h3>Search Albums</h3>
-                    <button
-                      className="close-button"
-                      onClick={() => {
-                        setShowAlbumSearch(false);
-                        setSearchResults([]);
-                        setSearchQuery("");
-                      }}
-                    >
-                      <X size={24} />
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleSearch} className="search-form">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search for albums..."
-                    />
-                    <button type="submit">
-                      <Search size={20} />
-                    </button>
-                  </form>
-
-                  <div className="search-results">
-                    {searchLoading ? (
-                      <div className="loading">Searching...</div>
-                    ) : Array.isArray(searchResults) && searchResults.length > 0 ? (
-                      searchResults
-                        .filter(album => album && album.id)
-                        .map((album) => (
-                          <div
-                            key={`search-${album.id}-${Date.now()}`}
-                            className="search-result-item"
-                          >
-                            <img
-                              src={getAlbumImageUrl(album)}
-                              alt={getAlbumName(album)}
-                              onError={(e) => {
-                                e.target.src = "/default-album-cover.png";
-                              }}
-                            />
-                            <div className="result-info">
-                              <h4>{getAlbumName(album)}</h4>
-                              <p>{getArtistName(album)}</p>
-                            </div>
-                            <button
-                              className="add-button"
-                              onClick={() => handleAddFavorite(album)}
-                            >
-                              <Plus size={20} />
-                            </button>
-                          </div>
-                        ))
-                    ) : (
-                      <div className="no-results">
-                        {searchQuery.trim()
-                          ? "No albums found"
-                          : "Search for albums to add to your favorites"}
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === 'activity' && (
+        <div className="activity-section">
+          <div className="activity-grid">
+            {recentLogs && recentLogs.length > 0 ? (
+              recentLogs.map(log => (
+                <div key={log.id} className="album-card">
+                  <img 
+                    src={log.album?.image_url || '/default-album-cover.png'} 
+                    alt={log.album?.name || 'Album cover'} 
+                    className="album-cover"
+                  />
+                  <div className="album-info">
+                    <h3>{log.album?.name || 'Unknown Album'}</h3>
+                    <p>{log.album?.artist || 'Unknown Artist'}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="no-activity">
+                No listening activity yet
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'favorites' && (
+        <div className="favorites-section">
+          <div className="activity-grid">
+            {favoriteAlbums && favoriteAlbums.length > 0 ? (
+              favoriteAlbums.map(favorite => (
+                <div key={favorite.album.spotify_id} className="album-card">
+                  <img 
+                    src={favorite.album.image_url || '/default-album-cover.png'} 
+                    alt={favorite.album.name} 
+                    className="album-cover"
+                  />
+                  <div className="album-info">
+                    <h3>{favorite.album.name}</h3>
+                    <p>{favorite.album.artist}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="no-favorites">
+                No favorite albums yet
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="error-message" style={{ color: 'red', marginTop: '10px' }}>

@@ -1,0 +1,211 @@
+@import '../vars.css';
+
+.log-album-page {
+    min-height: 100vh;
+    padding: 2rem;
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+.log-album-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: var(--color-bg-elevated);
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.log-album-container h1 {
+    margin-bottom: 2rem;
+    color: var(--color-text);
+    font-size: 2rem;
+}
+
+/* Selected Album Display */
+.selected-album {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+}
+
+.selected-album img {
+    width: 150px;
+    height: 150px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+}
+
+.album-details {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.album-details h2 {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 1.5rem;
+}
+
+.album-details p {
+    color: var(--color-text-muted);
+    margin: 0.5rem 0 0;
+}
+
+/* Form Styling */
+.log-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+/* Rating Stars */
+.rating-stars {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.star-button {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    transition: var(--transition-normal);
+}
+
+.star-button:hover {
+    transform: scale(1.1);
+}
+
+.star-button.active {
+    color: var(--color-primary);
+}
+
+.star-button .filled {
+    fill: var(--color-primary);
+}
+
+/* Form Inputs */
+textarea, input[type="date"] {
+    padding: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    resize: vertical;
+}
+
+textarea:focus, input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(157, 78, 221, 0.2);
+}
+
+/* Checkbox Styling */
+.checkbox {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.checkbox input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    accent-color: var(--color-primary);
+}
+
+/* Error Message */
+.error-message {
+    padding: 0.75rem;
+    background: var(--color-error-bg);
+    color: var(--color-error);
+    border-radius: var(--radius-md);
+    margin-top: 1rem;
+}
+
+/* Form Actions */
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.cancel-button, .submit-button {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-normal);
+}
+
+.cancel-button {
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+}
+
+.submit-button {
+    background: var(--color-primary);
+    color: white;
+}
+
+.cancel-button:hover {
+    background: var(--color-bg-highlight);
+}
+
+.submit-button:hover {
+    opacity: 0.9;
+}
+
+.submit-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .log-album-page {
+        padding: 1rem;
+    }
+
+    .log-album-container {
+        padding: 1.5rem;
+    }
+
+    .selected-album {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .selected-album img {
+        width: 200px;
+        height: 200px;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .cancel-button, .submit-button {
+        width: 100%;
+    }
+}

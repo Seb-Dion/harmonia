@@ -1,17 +1,25 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Album, Log, Profile, FavoriteAlbum
+from django.utils import timezone
 
 
 # User Serializer
 class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
     class Meta:
         model = User
-        fields = ["id", "username", "password"]
-        extra_kwargs = {"password": {"write_only": True}}
+        fields = ('username', 'password', 'email')
+        extra_kwargs = {'email': {'required': False}}
 
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            password=validated_data['password'],
+            email=validated_data.get('email', '')
+        )
+        return user
 
 # Album Serializer
 class AlbumSerializer(serializers.ModelSerializer):
@@ -36,6 +44,23 @@ class AlbumSerializer(serializers.ModelSerializer):
             'average_rating',
             'total_logs'
         ]
+        read_only_fields = ['id', 'average_rating', 'total_logs']
+
+    def validate_spotify_id(self, value):
+        """
+        Check that the spotify_id is valid.
+        """
+        if not value:
+            raise serializers.ValidationError("spotify_id is required")
+        return value
+
+    def validate_release_date(self, value):
+        """
+        Check that the release_date is valid.
+        """
+        if not value:
+            raise serializers.ValidationError("release_date is required")
+        return value
 
 # Favorite Album Serializer
 class FavoriteAlbumSerializer(serializers.ModelSerializer):
@@ -88,11 +113,13 @@ class ProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     followers_count = serializers.IntegerField(read_only=True)
     favorite_albums = serializers.SerializerMethodField()
+    total_logs = serializers.SerializerMethodField()
+    logs_this_year = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
-        fields = ['id', 'username', 'bio', 'avatar', 'avatar_url', 'followers_count', 'favorite_albums']
-        read_only_fields = ['id', 'username', 'followers_count', 'favorite_albums']
+        fields = ['id', 'username', 'bio', 'avatar', 'avatar_url', 'followers_count', 'favorite_albums', 'total_logs', 'logs_this_year']
+        read_only_fields = ['id', 'username', 'followers_count', 'favorite_albums', 'total_logs', 'logs_this_year']
 
     def get_favorite_albums(self, obj):
         favorites = FavoriteAlbum.objects.filter(user=obj.user)
@@ -115,3 +142,13 @@ class ProfileSerializer(serializers.ModelSerializer):
         if avatar:
             instance.avatar = avatar
         return super().update(instance, validated_data)
+
+    def get_total_logs(self, obj):
+        return Log.objects.filter(user=obj.user).count()
+
+    def get_logs_this_year(self, obj):
+        current_year = timezone.now().year
+        return Log.objects.filter(
+            user=obj.user,
+            created_at__year=current_year
+        ).count()

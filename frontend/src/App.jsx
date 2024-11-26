@@ -7,6 +7,7 @@ import NotFound from "./pages/NotFound"
 import ProtectedRoute from "./components/ProtectedRoute"
 import Navbar from "./components/Navbar"
 import Profile from "./pages/Profile"
+import LogAlbum from "./pages/LogAlbum"
 
 function Logout() {
   localStorage.clear()
@@ -48,6 +49,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Profile />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/log-album"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <LogAlbum />
                 </Layout>
               </ProtectedRoute>
             }

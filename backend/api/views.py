@@ -1,6 +1,6 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
@@ -17,29 +17,36 @@ from .serializers import (
     FavoriteAlbumSerializer
 )
 from rest_framework.parsers import MultiPartParser, FormParser
+from datetime import datetime
+from django.db import IntegrityError
+from django.contrib.auth.models import User
+from rest_framework import generics
 
-class CreateUserView(APIView):
-    def post(self, request):
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            Profile.objects.create(user=user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class CreateUserView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [AllowAny]
+    
+    def perform_create(self, serializer):
+        user = serializer.save()
+        return user
 
-class UserProfileView(APIView):
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
 
-    def get(self, request):
-        profile = request.user.profile
-        favorites = FavoriteAlbum.objects.filter(user=request.user)
-        print(f"Found {favorites.count()} favorites for user {request.user.username}")
-        for fav in favorites:
-            print(f"Favorite: {fav.album.name} by {fav.album.artist}")
+    def get_object(self):
+        return self.request.user.profile
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data = serializer.data
         
-        serializer = ProfileSerializer(profile, context={'request': request})
-        return Response(serializer.data)
+        # Log the data being sent
+        print("Profile data being sent:", data)
+        
+        return Response(data)
 
     def patch(self, request):
         profile = request.user.profile
@@ -66,9 +73,8 @@ class UserProfileView(APIView):
 @api_view(['GET'])
 def spotify_search(request):
     query = request.GET.get('q', '')
-    if not query:
-        return Response({'error': 'No search query provided'}, status=400)
-
+    print(f"Received search query: {query}")
+    
     try:
         spotify = spotipy.Spotify(
             client_credentials_manager=SpotifyClientCredentials(
@@ -77,11 +83,20 @@ def spotify_search(request):
             )
         )
         
-        results = spotify.search(q=query, type='album', limit=20)
+        # Increase limit to 50 and specify we want tracks
+        results = spotify.search(
+            q=query,
+            type='track',
+            limit=50  # Increased from default 20 to 50
+        )
+        print(f"Search results: {results}")
         return Response(results)
     except Exception as e:
-        print(f"Spotify search error: {str(e)}")
-        return Response({'error': str(e)}, status=500)
+        print(f"Search error: {e}")
+        return Response(
+            {'error': 'Failed to search Spotify'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -235,3 +250,93 @@ class UserStatsView(APIView):
         }
         
         return Response(stats)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_album(request):
+    try:
+        data = request.data.copy()
+        
+        # Format release date if needed
+        release_date = data.get('release_date', '')
+        if len(release_date) == 4:  # YYYY
+            data['release_date'] = f"{release_date}-01-01"
+        elif len(release_date) == 7:  # YYYY-MM
+            data['release_date'] = f"{release_date}-01"
+        
+        print("Processing album data:", data)  # Debug print
+        
+        # Try to get existing album first
+        try:
+            album = Album.objects.get(spotify_id=data['spotify_id'])
+            print("Found existing album:", album)  # Debug print
+            
+            # Update album data
+            serializer = AlbumSerializer(album, data=data)
+            if serializer.is_valid():
+                album = serializer.save()
+                return Response(AlbumSerializer(album).data, status=status.HTTP_200_OK)
+            else:
+                print("Update validation errors:", serializer.errors)  # Debug print
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Album.DoesNotExist:
+            print("Creating new album")  # Debug print
+            # Create new album
+            serializer = AlbumSerializer(data=data)
+            if serializer.is_valid():
+                album = serializer.save()
+                return Response(AlbumSerializer(album).data, status=status.HTTP_201_CREATED)
+            else:
+                print("Creation validation errors:", serializer.errors)  # Debug print
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+    except Exception as e:
+        print("Unexpected error:", str(e))  # Debug print
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Allow anyone to register
+def register_user(request):
+    try:
+        data = request.data
+        print("Received registration data:", data)  # Debug print
+
+        # Check if username exists
+        if User.objects.filter(username=data['username']).exists():
+            return Response(
+                {'error': 'Username already exists'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create user
+        user = User.objects.create_user(
+            username=data['username'],
+            email=data.get('email', ''),
+            password=data['password']
+        )
+
+        return Response(
+            {'message': 'User created successfully'},
+            status=status.HTTP_201_CREATED
+        )
+
+    except KeyError as e:
+        return Response(
+            {'error': f'Missing required field: {str(e)}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except IntegrityError as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        print("Registration error:", str(e))  # Debug print
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )

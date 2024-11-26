@@ -13,9 +13,52 @@ export const searchAlbums = async (query) => {
 // Function to log an album
 export const logAlbum = async (albumData) => {
     try {
-        const response = await api.post('/api/logs/', albumData);
+        console.log("Received album data:", albumData);
+        
+        // Format the release date
+        let releaseDate = albumData.release_date;
+        if (releaseDate.length === 4) { // YYYY
+            releaseDate = `${releaseDate}-01-01`;
+        } else if (releaseDate.length === 7) { // YYYY-MM
+            releaseDate = `${releaseDate}-01`;
+        }
+
+        // First, ensure the album exists in the database
+        const albumPayload = {
+            spotify_id: albumData.spotify_id,
+            name: albumData.name,
+            artist: albumData.artist,
+            image_url: albumData.image_url || '',
+            release_date: releaseDate,
+            external_url: albumData.external_url || '',
+            genres: albumData.genres || ''
+        };
+
+        console.log("Creating/updating album with exact payload:", JSON.stringify(albumPayload, null, 2));
+        
+        // Create or get the album
+        const albumResponse = await api.post('/api/albums/create/', albumPayload);
+        const album = albumResponse.data;
+
+        console.log("Album created/retrieved:", album);
+
+        // Now create the log
+        const logPayload = {
+            album_id: album.id,
+            rating: parseInt(albumData.rating),
+            review: albumData.review || '',
+            favorite_tracks: albumData.favorite_tracks || '',
+            relisten: Boolean(albumData.relisten),
+            listen_date: new Date().toISOString().split('T')[0]
+        };
+
+        console.log("Creating log with payload:", logPayload);
+        
+        const response = await api.post('/api/logs/', logPayload);
         return response.data;
     } catch (error) {
+        console.error("Error details:", error.response?.data);
+        console.error("Full error object:", error);
         throw error;
     }
 };

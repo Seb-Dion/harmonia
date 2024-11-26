@@ -9,7 +9,9 @@ from .views import (
     remove_favorite_album,
     LogAlbumView,
     LogDetailView,
-    UserStatsView
+    UserStatsView,
+    create_album,
+    register_user
 )
 
 urlpatterns = [
@@ -18,7 +20,7 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
     # User endpoints
-    path('register/', CreateUserView.as_view(), name='register'),
+    path('user/register/', CreateUserView.as_view(), name='register'),
     path('profile/', UserProfileView.as_view(), name='profile'),
     path('stats/', UserStatsView.as_view(), name='user-stats'),
     
@@ -33,4 +35,5 @@ urlpatterns = [
     # Logging endpoints
     path('logs/', LogAlbumView.as_view(), name='album-logs'),
     path('logs/<int:log_id>/', LogDetailView.as_view(), name='log-detail'),
+    path('albums/create/', create_album, name='create-album'),
 ]

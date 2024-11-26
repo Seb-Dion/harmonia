@@ -1,225 +1,171 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, Loader, Star } from "lucide-react";
-import AlbumLogger from "../components/AlbumLogger";
-import { searchAlbums, getRecentLogs } from "../api/albums";
-import "../styles/Home.css";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Plus, History, Star } from 'lucide-react';
+import api from '../api/api';
+import '../styles/Home.css';
+import { ACCESS_TOKEN } from '../constants';
+import { AnimatePresence, motion } from 'framer-motion';
 
 function Home() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedAlbum, setSelectedAlbum] = useState(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [recentLogs, setRecentLogs] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    const token = localStorage.getItem(ACCESS_TOKEN);
+    if (!token) {
+      navigate('/login');
+      return;
+    }
     fetchRecentLogs();
-  }, []);
+  }, [navigate]);
 
   const fetchRecentLogs = async () => {
     try {
-      const data = await getRecentLogs();
-      console.log('Fetched logs:', data); // Debug log
-      setRecentLogs(data || []);
+      const response = await api.get('api/logs/');
+      setRecentLogs(response.data);
     } catch (error) {
-      console.error("Failed to fetch recent logs:", error);
-      setRecentLogs([]); // Set empty array on error
+      console.error('Error fetching recent logs:', error);
     }
   };
 
   const handleSearch = async (e) => {
     e.preventDefault();
+    console.log('Search initiated with query:', searchQuery);
+    
     if (!searchQuery.trim()) return;
 
     setLoading(true);
-    setError("");
-    setSearchResults([]);
+    setError('');
 
     try {
-      const data = await searchAlbums(searchQuery);
-      if (data.albums?.items) {
-        setSearchResults(data.albums.items);
+      const response = await api.get(`api/spotify/search/?q=${encodeURIComponent(searchQuery)}&limit=50`);
+      console.log('Raw API response:', response.data);
+      
+      if (response.data.tracks && response.data.tracks.items) {
+        // Format the tracks data to get album information
+        const formattedResults = response.data.tracks.items.map(track => ({
+          spotify_id: track.album.id,
+          name: track.album.name,
+          artist: track.artists[0].name,
+          image_url: track.album.images[0]?.url || '',
+          release_date: track.album.release_date
+        }));
+
+        // Remove duplicates based on spotify_id
+        const uniqueAlbums = Array.from(
+          new Map(formattedResults.map(album => [album.spotify_id, album])).values()
+        );
+
+        console.log('Formatted albums:', uniqueAlbums);
+        setSearchResults(uniqueAlbums);
       } else {
-        setError("No albums found");
+        console.log('No results found');
+        setSearchResults([]);
       }
     } catch (error) {
-      console.error("Search failed:", error);
-      setError("Failed to search albums");
+      console.error('Search error:', error);
+      setError('Failed to search albums. Please try again.');
+      setSearchResults([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAlbumClick = (album) => {
-    setSelectedAlbum(album);
-  };
-
-  const handleLogSuccess = () => {
-    fetchRecentLogs();
-    setSelectedAlbum(null);
-  };
-
-  // Helper function to get album image URL
-  const getAlbumImageUrl = (album) => {
-    return album?.images?.[0]?.url || "/default-album-cover.png"; // Add a default album cover image
-  };
-
   return (
     <div className="home-container">
-      {/* Hero Section */}
-      <section className="hero-section">
-        <motion.h1
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          Track Your Music Journey
-        </motion.h1>
-
-        <motion.form
-          className="search-bar"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          onSubmit={handleSearch}
-        >
-          <Search size={20} />
-          <input
-            type="text"
-            placeholder="Search for albums..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? <Loader className="spin" size={20} /> : "Search"}
+      <section className="search-section">
+        <h2>Search Albums</h2>
+        <form onSubmit={handleSearch} className="search-form">
+          <div className="search-input-container">
+            <Search size={20} className="search-icon" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search for albums..."
+              className="search-input"
+            />
+          </div>
+          <button type="submit" className="search-button" disabled={loading}>
+            {loading ? 'Searching...' : 'Search'}
           </button>
-        </motion.form>
+        </form>
 
-        {error && (
-          <motion.div
-            className="error-message"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            {error}
-          </motion.div>
-        )}
-      </section>
+        {error && <div className="error-message">{error}</div>}
 
-      {/* Search Results */}
-      <AnimatePresence mode="wait">
-        {loading ? (
-          <motion.div
-            className="loading-container"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <Loader className="spin" size={40} />
-            <p>Searching albums...</p>
-          </motion.div>
-        ) : searchResults.length > 0 ? (
-          <motion.section
-            className="search-results"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-          >
-            <h2>Search Results</h2>
-            <div className="album-grid">
-              {searchResults
-                .filter(album => album !== null)
-                .map((album) => {
-                  if (!album || !album.id) return null;
-                  
-                  return (
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.div className="loading-container">
+              {/* ... loading content ... */}
+            </motion.div>
+          ) : searchResults.length > 0 ? (
+            <motion.section className="search-results">
+              <h2>Search Results</h2>
+              <div className="album-grid">
+                {searchResults
+                  .filter(album => album !== null)
+                  .map((album) => (
                     <motion.div
-                      key={album.id}
+                      key={album.spotify_id}
                       className="album-card"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleAlbumClick(album)}
                     >
                       <img
-                        src={getAlbumImageUrl(album)}
-                        alt={album.name || "Album cover"}
+                        src={album.image_url}
+                        alt={`${album.name} by ${album.artist}`}
                         className="album-cover"
                       />
                       <div className="album-info">
-                        <h3>{album.name || "Untitled Album"}</h3>
-                        <p>{album.artists?.[0]?.name || "Unknown Artist"}</p>
+                        <h3>{album.name}</h3>
+                        <p>{album.artist}</p>
                       </div>
+                      <button
+                        onClick={() => navigate('/log-album', { state: { album } })}
+                        className="log-button"
+                      >
+                        <Plus size={20} />
+                        Log
+                      </button>
                     </motion.div>
-                  );
-                })}
-            </div>
-          </motion.section>
-        ) : null}
-      </AnimatePresence>
+                  ))}
+              </div>
+            </motion.section>
+          ) : null}
+        </AnimatePresence>
+      </section>
 
-      {/* Recent Logs Section */}
-      {recentLogs?.length > 0 && !searchResults.length && (
-        <motion.section
-          className="recent-logs"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <h2>Recently Logged</h2>
-          <div className="album-grid">
-            {recentLogs
-              .filter(log => {
-                // Add detailed filtering with debug
-                const isValid = log && 
-                               log.album && 
-                               typeof log.album === 'object' && 
-                               log.album.name;
-                if (!isValid) {
-                  console.log('Filtered out invalid log:', log);
-                }
-                return isValid;
-              })
-              .map((log) => (
-                <motion.div
-                  key={log.id}
-                  className="album-card logged"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  <img
-                    src={log.album.image_url || "/default-album-cover.png"}
-                    alt={`${log.album.name} cover`}
-                    className="album-cover"
-                  />
-                  <div className="album-info">
-                    <h3>{log.album.name}</h3>
-                    <p>{log.album.artist}</p>
-                    <div className="rating">
-                      {Array.from({ length: log.rating || 0 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          size={16}
-                          fill="var(--color-primary)"
-                          stroke="none"
-                        />
-                      ))}
-                    </div>
+      <section className="recent-activity">
+        <h2>Recent Activity</h2>
+        <div className="activity-grid">
+          {Array.isArray(recentLogs) && recentLogs.map((log) => (
+            <div key={log.id} className="activity-card">
+              <img
+                src={log.album.image_url}
+                alt={`${log.album.name} by ${log.album.artist}`}
+                className="album-cover"
+              />
+              <div className="activity-info">
+                <div className="album-details">
+                  <h3>{log.album.name}</h3>
+                  <p>{log.album.artist}</p>
+                </div>
+                <div className="log-details">
+                  <div className="rating">
+                    <Star size={16} className="star-icon" />
+                    {log.rating}/5
                   </div>
-                </motion.div>
-              ))}
-          </div>
-        </motion.section>
-      )}
-
-      {/* Album Logger Modal */}
-      <AnimatePresence>
-        {selectedAlbum && (
-          <AlbumLogger
-            album={selectedAlbum}
-            onSuccess={handleLogSuccess}
-            onClose={() => setSelectedAlbum(null)}
-          />
-        )}
-      </AnimatePresence>
+                  <div className="date">
+                    {new Date(log.listen_date).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
