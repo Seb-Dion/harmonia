@@ -21,7 +21,7 @@ Welcome to Harmonia! This application allows users to track, review, and share t
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/yourusername/harmonia.git
+   git clone https://github.com/Seb-Dion/harmonia.git
    cd harmonia
    ```
 
