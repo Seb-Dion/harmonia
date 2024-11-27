@@ -3,9 +3,39 @@ import api from './api';  // Update this import to match your file structure
 // Function to search albums
 export const searchAlbums = async (query) => {
     try {
+        console.log('Searching with query:', query);
+        
         const response = await api.get(`/api/spotify/search/?q=${encodeURIComponent(query)}`);
-        return response.data;
+        console.log('Raw search response:', response.data);
+
+        // Transform Spotify tracks into the format we need
+        if (response.data && response.data.tracks && response.data.tracks.items) {
+            // Use a Map to deduplicate albums by ID
+            const albumMap = new Map();
+            
+            response.data.tracks.items.forEach(track => {
+                if (!albumMap.has(track.album.id)) {
+                    albumMap.set(track.album.id, {
+                        id: track.album.id,
+                        name: track.album.name,
+                        artists: track.album.artists,
+                        images: track.album.images,
+                        release_date: track.album.release_date,
+                        external_urls: track.album.external_urls,
+                        genres: track.album.genres || []
+                    });
+                }
+            });
+            
+            const albums = Array.from(albumMap.values());
+            console.log('Transformed albums:', albums);
+            return { albums: { items: albums } };
+        }
+        
+        console.error('Unexpected response structure:', response.data);
+        throw new Error('Invalid response from search');
     } catch (error) {
+        console.error('Search error:', error);
         throw error;
     }
 };

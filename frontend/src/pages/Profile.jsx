@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { User, Edit, Music, Save, X, Plus, Search, Loader, Heart, Logs } from "lucide-react";
+import { User, Edit, Music, Save, X, Plus, Search, Loader, Heart, Logs, Pencil } from "lucide-react";
 import api from "../api/api";
 import "../styles/Profile.css";
 import { motion, AnimatePresence } from "framer-motion";
-import { searchAlbums, getFavorites, addToFavorites, removeFavorite } from '../api/albums';
+import { searchAlbums, getFavorites, addToFavorites, removeFavorite, getRecentLogs } from '../api/albums';
 
 function Profile() {
   const [profile, setProfile] = useState(null);
@@ -21,9 +21,10 @@ function Profile() {
   const [stats, setStats] = useState({
     totalLogs: 0,
     thisYear: 0,
-    favorites: 0
+    followers: 0
   });
-  const [recentLogs, setRecentLogs] = useState([]);
+  const [recentReviews, setRecentReviews] = useState([]);
+  const [logs, setLogs] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,7 +43,7 @@ function Profile() {
         setStats({
           totalLogs: profileRes.data.total_logs || 0,
           thisYear: profileRes.data.logs_this_year || 0,
-          favorites: profileRes.data.favorite_albums?.length || 0
+          followers: profileRes.data.followers || 0
         });
         
         setLoading(false);
@@ -56,65 +57,62 @@ function Profile() {
     fetchData();
   }, []);
 
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const logsData = await getRecentLogs();
+        setLogs(logsData);
+      } catch (error) {
+        console.error('Error fetching logs:', error);
+      }
+    };
+    
+    fetchLogs();
+  }, []);
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      
+      try {
+        await api.patch("/api/user/profile/", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+        
+        const profileResponse = await api.get("/api/user/profile/");
+        setProfile(profileResponse.data);
+      } catch (error) {
+        console.error("Failed to update avatar:", error);
+        setError("Failed to update avatar");
+      }
+    }
+  };
+
+  const handleUpdateProfile = async () => {
     const formData = new FormData();
     formData.append("bio", bio);
-    if (avatar) {
-      formData.append("avatar", avatar);
-    }
 
     try {
-      console.log('Sending form data:', {
-        bio: bio,
-        avatar: avatar,
-        formDataEntries: Array.from(formData.entries())
-      });
-
-      const response = await api.patch("/api/user/profile/", formData, {
+      await api.patch("/api/user/profile/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
-      console.log('Profile update response:', response.data);
       
-      const [profileResponse, favoritesResponse] = await Promise.all([
-        api.get("/api/user/profile/"),
-        getFavorites()
-      ]);
-      
+      const profileResponse = await api.get("/api/user/profile/");
       setProfile(profileResponse.data);
-      setFavoriteAlbums(favoritesResponse || []);
       setEditing(false);
     } catch (error) {
-      console.error("Failed to update profile:", error);
-      setError("Failed to update profile");
+      console.error("Failed to update bio:", error);
+      setError("Failed to update bio");
     }
   };
 
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      console.log('Selected avatar file:', file); // Debug log
-      setAvatar(file);
-    }
-  };
-
-  const handleAlbumSearch = async (query) => {
-    try {
-      const response = await api.get(`/api/spotify/search/?q=${encodeURIComponent(query)}`);
-      if (response.data.albums?.items) {
-        setSearchResults(response.data.albums.items);
-      } else {
-        setError('No albums found');
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-      setError(error.response?.data?.error || 'Failed to search albums');
-    }
-  };
-
-  const handleAddFavorite = async (album) => {
+  const Favorite = async (album) => {
     try {
       console.log("Adding album to favorites:", album);
       
@@ -186,16 +184,6 @@ function Profile() {
     }
   };
 
-  const handleAddToFavorites = async (album) => {
-    try {
-      await addToFavorites(album);
-      await fetchFavoriteAlbums(); // Refresh the favorites list
-    } catch (error) {
-      console.error('Failed to add favorite:', error);
-      setError('Failed to add album to favorites');
-    }
-  };
-
   // Helper function to safely get album image URL
   const getAlbumImageUrl = (albumData) => {
     console.log('Getting image URL for:', albumData); // Debug log
@@ -236,18 +224,9 @@ function Profile() {
     return albumData.artist || 'Unknown Artist';
   };
 
-  const getImageUrl = (favorite) => {
-    console.log('Favorite album data:', favorite.album); // Add this debug log
-    return favorite.album?.image_url || '/default-album-cover.png';
-  };
-
-  const handleShowAlbumSearch = () => {
-    if (profile?.favorite_albums?.length >= 4) {
-      setError('Maximum number of favorites (4) reached');
-      return;
-    }
-    setShowAlbumSearch(true);
-    setError(null);
+  const handleRecentReviews = async () => {
+    const response = await api.get("/api/user/recent-reviews/");
+    setRecentReviews(response.data);
   };
 
   if (loading) return <div>Loading...</div>;
@@ -258,16 +237,54 @@ function Profile() {
   return (
     <div className="profile-container">
       <div className="profile-header">
-        <div className="profile-avatar">
-          <img src={profile?.avatar_url || defaultAvatar} alt="Profile" />
+        <div className="profile-avatar-container">
+          <div className="profile-avatar">
+            <img src={profile?.avatar_url || defaultAvatar} alt="Profile" />
+          </div>
+          <button className="avatar-edit-button" onClick={() => document.getElementById('avatar-upload').click()}>
+            <Pencil size={16} />
+          </button>
+          <input
+            type="file"
+            id="avatar-upload"
+            onChange={handleAvatarChange}
+            accept="image/*"
+            style={{ display: 'none' }}
+          />
         </div>
         
         <div className="profile-info">
-          <h1 className="profile-username">{profile?.username}</h1>
-          <p className="bio-text">{profile?.bio}</p>
+          <div className="username-container">
+            <h1 className="profile-username">{profile?.username}</h1>
+          </div>
+          <div className="bio-container">
+            {editing ? (
+              <input
+                type="text"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                onBlur={() => {
+                  handleUpdateProfile();
+                  setEditing(false);
+                }}
+                autoFocus
+              />
+            ) : (
+              <>
+                <p className="bio-text">{profile?.bio || "No bio yet"}</p>
+                <button className="bio-edit-button" onClick={() => setEditing(true)}>
+                  <Pencil size={16} />
+                </button>
+              </>
+            )}
+          </div>
         </div>
         
         <div className="profile-stats">
+          <div className="stat-item">
+            <div className="stat-value">{stats.followers}</div>
+            <div className="stat-label">Followers</div>
+          </div>
           <div className="stat-item">
             <div className="stat-value">{stats.totalLogs}</div>
             <div className="stat-label">Albums</div>
@@ -276,79 +293,36 @@ function Profile() {
             <div className="stat-value">{stats.thisYear}</div>
             <div className="stat-label">This Year</div>
           </div>
-          <div className="stat-item">
-            <div className="stat-value">{stats.favorites}</div>
-            <div className="stat-label">Favorites</div>
-          </div>
         </div>
       </div>
-
-      <nav className="profile-nav">
-        <button className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
-                onClick={() => setActiveTab('profile')}>
-          Profile
-        </button>
-        <button className={`nav-item ${activeTab === 'activity' ? 'active' : ''}`}
-                onClick={() => setActiveTab('activity')}>
-          Activity
-        </button>
-        <button className={`nav-item ${activeTab === 'favorites' ? 'active' : ''}`}
-                onClick={() => setActiveTab('favorites')}>
-          Favorites
-        </button>
-      </nav>
 
       {activeTab === 'profile' && (
         <div className="profile-content">
           <div className="profile-section">
-            {editing ? (
-              <form className="edit-form" onSubmit={handleUpdateProfile}>
-                <div className="form-group">
-                  <label>Profile Picture</label>
-                  <input
-                    type="file"
-                    onChange={handleAvatarChange}
-                    accept="image/*"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Recent Reviews</label>
-                  <textarea
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="Tell us about yourself..."
-                    rows={4}
-                  />
-                </div>
-                <div className="form-actions">
-                  <button type="submit" className="save-button">
-                    <Save size={20} />
-                    Save Changes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditing(false);
-                      setBio(profile?.bio || "");
-                    }}
-                    className="cancel-button"
-                  >
-                    <X size={20} />
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <>
-                <h2 className="section-title">
-                  <Logs size={24} />
-                  Recent Reviews
-                </h2>
-                <p className="bio-text">
-                  {profile?.bio ? profile.bio : "No bio yet"}
-                </p>
-              </>
-            )}
+            <div className="recent-reviews">
+              <h2 className="section-title">
+                <Logs size={24} />
+                Recent Reviews
+              </h2>
+              {logs
+                .filter(log => log.review)
+                .slice(0, 3)
+                .map(log => (
+                  <div key={log.id} className="review-item">
+                    <img src={log.album.image_url || '/default-album-cover.png'} alt={log.album.name} className="review-album-review" />
+                    <div>
+                      <h3>{log.album.name}</h3>
+                      <p>{log.rating}★</p>
+                    </div>
+                    <div className="review-content">
+                      {log.review && <p className="review-text">{log.review}</p>}
+                      <p className="review-date">
+                        {new Date(log.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+            </div>
           </div>
 
           <div className="profile-section">

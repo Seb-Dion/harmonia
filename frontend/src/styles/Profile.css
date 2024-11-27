@@ -623,3 +623,142 @@
     background: var(--color-bg-elevated);
     border-radius: var(--radius-lg);
 }
+
+.username-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.edit-button {
+    padding: 5px;
+    margin-bottom: -25px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.2s;
+}
+
+.edit-button:hover {
+    color: #333;
+}
+
+.recent-reviews {
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  color: var(--color-text);
+  font-size: 1.25rem;
+}
+
+.review-item {
+  display: grid;
+  grid-template-columns: 80px auto;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 1rem;
+}
+
+.review-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.review-item img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.review-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.review-item h3 {
+  font-size: 1rem;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.rating {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.review-text {
+  margin: 0;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
+.review-date {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.profile-avatar-container {
+  position: relative;
+  display: inline-block;
+}
+
+.avatar-edit-button {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: var(--color-primary);
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  padding: 4px;
+}
+
+.bio-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bio-edit-button {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+}
+
+.bio-edit-button:hover {
+  opacity: 1;
+}
+
+.bio-container input {
+  background: var(--color-background-light);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: var(--color-text);
+  width: 100%;
+}

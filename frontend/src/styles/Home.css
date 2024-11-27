@@ -24,6 +24,7 @@
 .search-input-container {
     position: relative;
     flex: 1;
+    margin-right: 30px;
 }
 
 .search-icon {
@@ -45,6 +46,7 @@
 
 .search-button {
     padding: 12px 24px;
+    margin-right: 30px;
     border: none;
     border-radius: 8px;
     background: #9d4edd;
