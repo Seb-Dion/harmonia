@@ -1,4 +1,4 @@
-# HARMONIA
+# Harmonia
 
 Welcome to Harmonia! This application allows users to track, review, and share their favorite albums. With features like personalized lists, album reviews, and social interactions, it's the perfect tool for music enthusiasts.
 
@@ -11,11 +11,17 @@ Welcome to Harmonia! This application allows users to track, review, and share t
 - **Reviews**: Write and share reviews for albums.
 - **Recent Activity**: View your latest reviews and logs.
 
+## Tech Stack
+
+- **Frontend**: React with Vite
+- **Backend**: Django
+- **Database**: SQLite
+
 ## Installation
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/Seb-Dion/harmonia.git
+   git clone https://github.com/yourusername/harmonia.git
    cd harmonia
    ```
 
@@ -63,10 +69,14 @@ Welcome to Harmonia! This application allows users to track, review, and share t
 - **Write Reviews**: Share your thoughts on albums with the community.
 - **Explore**: Discover new music through trending albums and user recommendations.
 
+## Contributing
+
+Contributions are welcome! Please fork the repository and submit a pull request for any improvements or bug fixes.
+
 ## License
 
 This project is licensed under the MIT License.
 
 ## Contact
 
-For questions or feedback, please contact [your email].
+For questions or feedback, please contact [swd7104@gmail.com].
