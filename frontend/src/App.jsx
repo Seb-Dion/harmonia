@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoute"
 import Navbar from "./components/Navbar"
 import Profile from "./pages/Profile"
 import LogAlbum from "./pages/LogAlbum"
+import ListDetails from "./pages/ListDetails"
 
 function Logout() {
   localStorage.clear()
@@ -59,6 +60,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <LogAlbum />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/lists/:listId"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ListDetails />
                 </Layout>
               </ProtectedRoute>
             }

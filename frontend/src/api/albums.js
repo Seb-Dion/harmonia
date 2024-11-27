@@ -206,3 +206,82 @@ export const deleteLog = async (logId) => {
         throw error;
     }
 };
+
+// Function to get user's lists
+export const getUserLists = async () => {
+    try {
+        const response = await api.get('/api/lists/');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching lists:', error);
+        throw error;
+    }
+};
+
+// Function to create a new list
+export const createList = async (listData) => {
+    try {
+        console.log('Creating list with data:', listData);
+        const response = await api.post('/api/lists/', listData);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating list:', error.response?.data || error);
+        throw error;
+    }
+};
+
+// Function to update a list
+export const updateList = async (listId, updateData) => {
+    try {
+        console.log(`Updating list ${listId} with data:`, updateData);
+        const response = await api.patch(`/api/lists/${listId}/`, updateData);
+        return response.data;
+    } catch (error) {
+        console.error('Error updating list:', error.response?.data || error);
+        throw error;
+    }
+};
+
+// Function to delete a list
+export const deleteList = async (listId) => {
+    try {
+        await api.delete(`/api/lists/${listId}/`);
+    } catch (error) {
+        console.error('Error deleting list:', error.response?.data || error);
+        throw error;
+    }
+};
+
+// Function to add album to a list
+export const addAlbumToList = async (listId, albumData) => {
+    try {
+        console.log('Adding album to list:', { listId, albumData }); // Debug log
+        const response = await api.post(`/api/lists/${listId}/albums/`, albumData);
+        console.log('Response:', response.data); // Debug log
+        return response.data;
+    } catch (error) {
+        console.error('Error adding album to list:', error.response?.data || error);
+        throw error;
+    }
+};
+
+// Function to remove album from a list
+export const removeAlbumFromList = async (listId, albumId) => {
+    try {
+        await api.delete(`/api/lists/${listId}/albums/${albumId}/`);
+    } catch (error) {
+        console.error('Error removing album from list:', error.response?.data || error);
+        throw error;
+    }
+};
+
+// Function to get albums in a list
+export const getListAlbums = async (listId) => {
+    try {
+        const response = await api.get(`/api/lists/${listId}/albums/`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching list albums:', error.response?.data || error);
+        throw error;
+    }
+};

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { User, Edit, Music, Save, X, Plus, Search, Loader, Heart, Logs, Pencil } from "lucide-react";
+import { Music, X, Plus, Search, Logs, Pencil, Scroll } from "lucide-react";
 import api from "../api/api";
 import "../styles/Profile.css";
 import { motion, AnimatePresence } from "framer-motion";
-import { searchAlbums, getFavorites, addToFavorites, removeFavorite, getRecentLogs } from '../api/albums';
+import { searchAlbums, getFavorites, addToFavorites, removeFavorite, getRecentLogs, getUserLists, createList, deleteList, addAlbumToList } from '../api/albums';
+import defaultAvatar from '../assets/default.png';
+import { useNavigate } from 'react-router-dom';
 
 function Profile() {
   const [profile, setProfile] = useState(null);
@@ -23,8 +25,14 @@ function Profile() {
     thisYear: 0,
     followers: 0
   });
-  const [recentReviews, setRecentReviews] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [lists, setLists] = useState([]);
+  const [showCreateList, setShowCreateList] = useState(false);
+  const [newListTitle, setNewListTitle] = useState('');
+  const [newListDescription, setNewListDescription] = useState('');
+  const [showAddToList, setShowAddToList] = useState(false);
+  const [selectedAlbum, setSelectedAlbum] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,6 +76,19 @@ function Profile() {
     };
     
     fetchLogs();
+  }, []);
+
+  useEffect(() => {
+    const fetchLists = async () => {
+      try {
+        const listsData = await getUserLists();
+        setLists(listsData);
+      } catch (error) {
+        console.error('Error fetching lists:', error);
+      }
+    };
+    
+    fetchLists();
   }, []);
 
   const handleAvatarChange = async (e) => {
@@ -184,6 +205,57 @@ function Profile() {
     }
   };
 
+  const handleCreateList = async (e) => {
+    e.preventDefault();
+    try {
+      const newList = await createList({
+        title: newListTitle,
+        description: newListDescription
+      });
+      setLists([...lists, newList]);
+      setShowCreateList(false);
+      setNewListTitle('');
+      setNewListDescription('');
+    } catch (error) {
+      console.error('Error creating list:', error);
+      setError('Failed to create list');
+    }
+  };
+
+  const handleDeleteList = async (listId) => {
+    try {
+      await deleteList(listId);
+      setLists(lists.filter(list => list.id !== listId));
+    } catch (error) {
+      console.error('Error deleting list:', error);
+      setError('Failed to delete list');
+    }
+  };
+
+  const handleAddToList = async (listId, album) => {
+    try {
+      console.log('Adding album to list:', { listId, album }); // Debug log
+      await addAlbumToList(listId, {
+        spotify_id: album.id,
+        name: album.name,
+        artist: album.artists?.[0]?.name || album.artist,
+        image_url: album.images?.[0]?.url || album.image_url,
+        release_date: album.release_date || '',
+        external_url: album.external_urls?.spotify || album.external_url || ''
+      });
+      
+      const listsData = await getUserLists();
+      setLists(listsData);
+      
+      setShowAddToList(false);
+      setSelectedAlbum(null);
+      setError(null);
+    } catch (error) {
+      console.error('Failed to add album to list:', error.response?.data || error);
+      setError('Failed to add album to list: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
   // Helper function to safely get album image URL
   const getAlbumImageUrl = (albumData) => {
     console.log('Getting image URL for:', albumData); // Debug log
@@ -222,11 +294,6 @@ function Profile() {
     
     // For favorite albums (your backend format)
     return albumData.artist || 'Unknown Artist';
-  };
-
-  const handleRecentReviews = async () => {
-    const response = await api.get("/api/user/recent-reviews/");
-    setRecentReviews(response.data);
   };
 
   if (loading) return <div>Loading...</div>;
@@ -312,7 +379,13 @@ function Profile() {
                     <img src={log.album.image_url || '/default-album-cover.png'} alt={log.album.name} className="review-album-review" />
                     <div>
                       <h3>{log.album.name}</h3>
-                      <p>{log.rating}★</p>
+                      <div className="rating">
+                        {[...Array(5)].map((_, index) => (
+                          <span key={index} className={index < log.rating ? "star filled" : "star"}>
+                            ★
+                          </span>
+                        ))}
+                      </div>
                     </div>
                     <div className="review-content">
                       {log.review && <p className="review-text">{log.review}</p>}
@@ -352,12 +425,23 @@ function Profile() {
                         <h3>{favorite.album.name}</h3>
                         <p>{favorite.album.artist}</p>
                       </div>
-                      <motion.button
-                        className="remove-favorite"
-                        onClick={() => handleRemoveFavorite(favorite.album.spotify_id)}
-                      >
-                        <X size={16} />
-                      </motion.button>
+                      <div className="album-actions">
+                        <motion.button
+                          className="remove-favorite"
+                          onClick={() => handleRemoveFavorite(favorite.album.spotify_id)}
+                        >
+                          <X size={16} />
+                        </motion.button>
+                        <motion.button
+                          className="add-to-list-button"
+                          onClick={() => {
+                            setSelectedAlbum(favorite.album);
+                            setShowAddToList(true);
+                          }}
+                        >
+                          <Scroll size={16} />
+                        </motion.button>
+                      </div>
                     </motion.div>
                   ))
                 ) : (
@@ -443,12 +527,23 @@ function Profile() {
                                 <h4>{getAlbumName(album)}</h4>
                                 <p>{getArtistName(album)}</p>
                               </div>
-                              <button
-                                className="add-button"
-                                onClick={() => handleAddFavorite(album)}
-                              >
-                                <Plus size={20} />
-                              </button>
+                              <div className="result-actions">
+                                <button
+                                  className="add-button"
+                                  onClick={() => Favorite(album)}
+                                >
+                                  <Plus size={20} />
+                                </button>
+                                <button
+                                  className="add-to-list-button"
+                                  onClick={() => {
+                                    setSelectedAlbum(album);
+                                    setShowAddToList(true);
+                                  }}
+                                >
+                                  <Scroll size={20} />
+                                </button>
+                              </div>
                             </div>
                           ))
                       ) : (
@@ -464,57 +559,107 @@ function Profile() {
               )}
             </AnimatePresence>
           </div>
-        </div>
-      )}
 
-      {activeTab === 'activity' && (
-        <div className="activity-section">
-          <div className="activity-grid">
-            {recentLogs && recentLogs.length > 0 ? (
-              recentLogs.map(log => (
-                <div key={log.id} className="album-card">
-                  <img 
-                    src={log.album?.image_url || '/default-album-cover.png'} 
-                    alt={log.album?.name || 'Album cover'} 
-                    className="album-cover"
-                  />
-                  <div className="album-info">
-                    <h3>{log.album?.name || 'Unknown Album'}</h3>
-                    <p>{log.album?.artist || 'Unknown Artist'}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="no-activity">
-                No listening activity yet
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+          <div className="lists-container">
+            <div className="lists-section-header">
+              <h2 className="section-title">
+                <Scroll size={24} />
+                Your Lists
+              </h2>
+              <button 
+                className="create-list-button"
+                onClick={() => setShowCreateList(true)}
+              >
+                <Plus size={20} />
+                Create List
+              </button>
+            </div>
 
-      {activeTab === 'favorites' && (
-        <div className="favorites-section">
-          <div className="activity-grid">
-            {favoriteAlbums && favoriteAlbums.length > 0 ? (
-              favoriteAlbums.map(favorite => (
-                <div key={favorite.album.spotify_id} className="album-card">
-                  <img 
-                    src={favorite.album.image_url || '/default-album-cover.png'} 
-                    alt={favorite.album.name} 
-                    className="album-cover"
-                  />
-                  <div className="album-info">
-                    <h3>{favorite.album.name}</h3>
-                    <p>{favorite.album.artist}</p>
+            <div className="lists-grid">
+              {lists.map(list => (
+                <motion.div 
+                  key={list.id} 
+                  className="list-card"
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  onClick={() => navigate(`/lists/${list.id}`)}
+                >
+                  <h3>{list.title}</h3>
+                  <p>{list.description}</p>
+                  <div className="list-meta">
+                    <span>{list.album_count || 0} albums</span>
+                    <button
+                      className="delete-list"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteList(list.id);
+                      }}
+                    >
+                      <X size={16} />
+                    </button>
                   </div>
-                </div>
-              ))
-            ) : (
-              <div className="no-favorites">
-                No favorite albums yet
-              </div>
-            )}
+                </motion.div>
+              ))}
+            </div>
+
+            <AnimatePresence>
+              {showCreateList && (
+                <motion.div
+                  className="create-list-modal"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <motion.div
+                    className="modal-content"
+                    initial={{ y: 50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 50, opacity: 0 }}
+                  >
+                    <div className="modal-header">
+                      <h3>Create New List</h3>
+                      <button
+                        className="close-button"
+                        onClick={() => setShowCreateList(false)}
+                      >
+                        <X size={24} />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleCreateList} className="create-list-form">
+                      <div className="form-group">
+                        <label htmlFor="list-title">List Title</label>
+                        <input
+                          id="list-title"
+                          type="text"
+                          value={newListTitle}
+                          onChange={(e) => setNewListTitle(e.target.value)}
+                          placeholder="e.g., Top 10 Albums of 2023"
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="list-description">Description (optional)</label>
+                        <textarea
+                          id="list-description"
+                          value={newListDescription}
+                          onChange={(e) => setNewListDescription(e.target.value)}
+                          placeholder="Add a description for your list..."
+                          rows={3}
+                        />
+                      </div>
+                      <div className="form-actions">
+                        <button type="submit" className="submit-button">
+                          Create List
+                        </button>
+                      </div>
+                    </form>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       )}
@@ -524,6 +669,57 @@ function Profile() {
           {error}
         </div>
       )}
+
+      <AnimatePresence>
+        {showAddToList && selectedAlbum && (
+          <motion.div
+            className="add-to-list-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="modal-content"
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+            >
+              <div className="modal-header">
+                <h3>Add to List</h3>
+                <button
+                  className="close-button"
+                  onClick={() => {
+                    setShowAddToList(false);
+                    setSelectedAlbum(null);
+                  }}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="lists-selection">
+                {lists.map(list => (
+                  <button
+                    key={list.id}
+                    className="list-select-button"
+                    onClick={() => handleAddToList(list.id, selectedAlbum)}
+                  >
+                    <h4>{list.title}</h4>
+                    <span>{list.album_count || 0} albums</span>
+                  </button>
+                ))}
+                
+                {lists.length === 0 && (
+                  <p className="no-lists">
+                    You haven't created any lists yet. Create one first!
+                  </p>
+                )}
+              </div>
+            
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

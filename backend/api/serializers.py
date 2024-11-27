@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Album, Log, Profile, FavoriteAlbum
+from .models import Album, Log, Profile, FavoriteAlbum, List, ListAlbum
 from django.utils import timezone
 
 
@@ -152,3 +152,27 @@ class ProfileSerializer(serializers.ModelSerializer):
             user=obj.user,
             created_at__year=current_year
         ).count()
+
+# List Album Serializer
+class ListAlbumSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ListAlbum
+        fields = ['id', 'spotify_id', 'name', 'artist', 'image_url', 'release_date', 'external_url', 'list']
+        read_only_fields = ['id']
+
+# List Serializer
+class ListSerializer(serializers.ModelSerializer):
+    albums = ListAlbumSerializer(many=True, read_only=True)
+    album_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = List
+        fields = ['id', 'title', 'description', 'created_at', 'updated_at', 'albums', 'album_count']
+        read_only_fields = ['user']
+
+    def get_album_count(self, obj):
+        return obj.albums.count()
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)

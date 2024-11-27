@@ -1,5 +1,6 @@
-from django.urls import path
+from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework.routers import DefaultRouter
 from .views import (
     CreateUserView,
     UserProfileView,
@@ -11,8 +12,13 @@ from .views import (
     LogDetailView,
     UserStatsView,
     create_album,
-    register_user
+    register_user,
+    ListViewSet,
+    get_trending_albums
 )
+
+router = DefaultRouter()
+router.register(r'lists', ListViewSet, basename='list')
 
 urlpatterns = [
     # Authentication endpoints
@@ -36,4 +42,8 @@ urlpatterns = [
     path('logs/', LogAlbumView.as_view(), name='album-logs'),
     path('logs/<int:log_id>/', LogDetailView.as_view(), name='log-detail'),
     path('albums/create/', create_album, name='create-album'),
+    path('', include(router.urls)),
+
+    # Trending albums
+    path('trending-albums/', get_trending_albums, name='trending-albums'),
 ]

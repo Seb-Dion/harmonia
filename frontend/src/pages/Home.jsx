@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, History, Star } from 'lucide-react';
+import { Search, Plus, History, Star, Disc, TrendingUp, Clock, Award, X } from 'lucide-react';
 import api from '../api/api';
 import '../styles/Home.css';
 import { ACCESS_TOKEN } from '../constants';
@@ -12,6 +12,10 @@ function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [recentLogs, setRecentLogs] = useState([]);
+  const [userStats, setUserStats] = useState(null);
+  const [activeSection, setActiveSection] = useState('discover');
+  const [activeSearch, setActiveSearch] = useState([]);
+  const [trendingAlbums, setTrendingAlbums] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,33 +24,31 @@ function Home() {
       navigate('/login');
       return;
     }
-    fetchRecentLogs();
+    fetchInitialData();
   }, [navigate]);
 
-  const fetchRecentLogs = async () => {
+  const fetchInitialData = async () => {
     try {
-      const response = await api.get('api/logs/');
-      setRecentLogs(response.data);
+      const [logsResponse, statsResponse] = await Promise.all([
+        api.get('api/logs/'),
+        api.get('api/stats/')
+      ]);
+      setRecentLogs(logsResponse.data);
+      setUserStats(statsResponse.data);
     } catch (error) {
-      console.error('Error fetching recent logs:', error);
+      console.error('Error fetching initial data:', error);
     }
   };
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    console.log('Search initiated with query:', searchQuery);
-    
     if (!searchQuery.trim()) return;
 
     setLoading(true);
     setError('');
-
     try {
       const response = await api.get(`api/spotify/search/?q=${encodeURIComponent(searchQuery)}&limit=50`);
-      console.log('Raw API response:', response.data);
-      
-      if (response.data.tracks && response.data.tracks.items) {
-        // Format the tracks data to get album information
+      if (response.data.tracks?.items) {
         const formattedResults = response.data.tracks.items.map(track => ({
           spotify_id: track.album.id,
           name: track.album.name,
@@ -55,118 +57,296 @@ function Home() {
           release_date: track.album.release_date
         }));
 
-        // Remove duplicates based on spotify_id
         const uniqueAlbums = Array.from(
           new Map(formattedResults.map(album => [album.spotify_id, album])).values()
         );
-
-        console.log('Formatted albums:', uniqueAlbums);
         setSearchResults(uniqueAlbums);
-      } else {
-        console.log('No results found');
-        setSearchResults([]);
       }
     } catch (error) {
-      console.error('Search error:', error);
       setError('Failed to search albums. Please try again.');
-      setSearchResults([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleInputChange = async (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    if (value === '') {
+      setActiveSearch([]);
+      return;
+    }
+
+    try {
+      const response = await api.get(`api/spotify/search/?q=${encodeURIComponent(value)}&limit=8`);
+      if (response.data.tracks?.items) {
+        const suggestions = response.data.tracks.items.map(track => ({
+          id: track.album.id,
+          name: track.album.name,
+          artist: track.artists[0].name
+        }));
+        setActiveSearch(suggestions);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      setActiveSearch([]);
+    }
+  };
+
+  const fetchTrendingAlbums = async () => {
+    try {
+      console.log('Fetching trending albums...');
+      const response = await api.get('api/trending-albums/');
+      console.log('Response:', response.data);
+      setTrendingAlbums(response.data);
+    } catch (error) {
+      console.error('Error fetching trending albums:', error);
+      console.error('Error response:', error.response?.data);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSection === 'trending') {
+      fetchTrendingAlbums();
+    }
+  }, [activeSection]);
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="home-container">
-      <section className="search-section">
-        <h2>Search Albums</h2>
-        <form onSubmit={handleSearch} className="search-form">
-          <div className="search-input-container">
-            <Search size={20} className="search-icon" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for albums..."
-              className="search-input"
-            />
+    <motion.div 
+      className="home-container"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      {/* Stats Overview */}
+      <motion.section className="stats-overview" variants={itemVariants}>
+        <div className="stat-card">
+          <Disc className="stat-icon" />
+          <div className="stat-content">
+            <h3>Total Albums</h3>
+            <p>{userStats?.total_albums || 0}</p>
           </div>
-          <button type="submit" className="search-button" disabled={loading}>
-            {loading ? 'Searching...' : 'Search'}
-          </button>
-        </form>
-
-        {error && <div className="error-message">{error}</div>}
-
-        <AnimatePresence mode="wait">
-          {loading ? (
-            <motion.div className="loading-container">
-              {/* ... loading content ... */}
-            </motion.div>
-          ) : searchResults.length > 0 ? (
-            <motion.section className="search-results">
-              <h2>Search Results</h2>
-              <div className="album-grid">
-                {searchResults
-                  .filter(album => album !== null)
-                  .map((album) => (
-                    <motion.div
-                      key={album.spotify_id}
-                      className="album-card"
-                    >
-                      <img
-                        src={album.image_url}
-                        alt={`${album.name} by ${album.artist}`}
-                        className="album-cover"
-                      />
-                      <div className="album-info">
-                        <h3>{album.name}</h3>
-                        <p>{album.artist}</p>
-                      </div>
-                      <button
-                        onClick={() => navigate('/log-album', { state: { album } })}
-                        className="log-button"
-                      >
-                        <Plus size={20} />
-                        Log
-                      </button>
-                    </motion.div>
-                  ))}
-              </div>
-            </motion.section>
-          ) : null}
-        </AnimatePresence>
-      </section>
-
-      <section className="recent-activity">
-        <h2>Recent Activity</h2>
-        <div className="activity-grid">
-          {Array.isArray(recentLogs) && recentLogs.map((log) => (
-            <div key={log.id} className="activity-card">
-              <img
-                src={log.album.image_url}
-                alt={`${log.album.name} by ${log.album.artist}`}
-                className="album-cover"
-              />
-              <div className="activity-info">
-                <div className="album-details">
-                  <h3>{log.album.name}</h3>
-                  <p>{log.album.artist}</p>
-                </div>
-                <div className="log-details">
-                  <div className="rating">
-                    <Star size={16} className="star-icon" />
-                    {log.rating}/5
-                  </div>
-                  <div className="date">
-                    {new Date(log.listen_date).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
-      </section>
-    </div>
+        <div className="stat-card">
+          <Star className="stat-icon" />
+          <div className="stat-content">
+            <h3>Average Rating</h3>
+            <p>{userStats?.average_rating?.toFixed(1) || 0}/5</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <Clock className="stat-icon" />
+          <div className="stat-content">
+            <h3>Recent Logs</h3>
+            <p>{recentLogs.length}</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <Award className="stat-icon" />
+          <div className="stat-content">
+            <h3>Top Genre</h3>
+            <p>{userStats?.top_genre || 'N/A'}</p>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Navigation Tabs */}
+      <motion.nav className="section-tabs" variants={itemVariants}>
+        <button 
+          className={activeSection === 'discover' ? 'active' : ''}
+          onClick={() => setActiveSection('discover')}
+        >
+          Discover
+        </button>
+        <button 
+          className={activeSection === 'recent' ? 'active' : ''}
+          onClick={() => setActiveSection('recent')}
+        >
+          Recent Activity
+        </button>
+        <button 
+          className={activeSection === 'trending' ? 'active' : ''}
+          onClick={() => setActiveSection('trending')}
+        >
+          Trending
+        </button>
+      </motion.nav>
+
+      <AnimatePresence mode="wait">
+        {activeSection === 'discover' && (
+          <motion.section 
+            className="discover-section"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+          >
+            <form onSubmit={handleSearch} className="search-form">
+              <div className="search-input-container">
+                <input 
+                  type="search" 
+                  placeholder="Search for albums..." 
+                  className="search-input"
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchQuery}
+                />
+                <button 
+                  type="submit"
+                  className="search-icon-button"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <motion.div 
+                      className="loading-spinner"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    />
+                  ) : (
+                    <Search size={20} />
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {error && (
+              <motion.div 
+                className="error-message"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                {error}
+              </motion.div>
+            )}
+
+            <motion.div 
+              className="album-grid"
+              variants={containerVariants}
+            >
+              {searchResults.map((album) => (
+                <motion.div
+                  key={album.spotify_id}
+                  className="album-card"
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.05, y: -5 }}
+                >
+                  <img
+                    src={album.image_url}
+                    alt={`${album.name} by ${album.artist}`}
+                    className="album-cover"
+                  />
+                  <div className="album-info">
+                    <h3>{album.name}</h3>
+                    <p>{album.artist}</p>
+                  </div>
+                  <motion.button
+                    onClick={() => navigate('/log-album', { state: { album } })}
+                    className="log-button"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Plus size={20} />
+                    Log
+                  </motion.button>
+                </motion.div>
+              ))}
+            </motion.div>
+          </motion.section>
+        )}
+
+        {activeSection === 'recent' && (
+          <motion.section 
+            className="recent-activity"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+          >
+            <div className="activity-grid">
+              {recentLogs.map((log) => (
+                <motion.div 
+                  key={log.id} 
+                  className="activity-card"
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <img
+                    src={log.album.image_url}
+                    alt={`${log.album.name} by ${log.album.artist}`}
+                    className="album-cover"
+                  />
+                  <div className="activity-info">
+                    <div className="album-details">
+                      <h3>{log.album.name}</h3>
+                      <p>{log.album.artist}</p>
+                    </div>
+                    <div className="log-details">
+                      <div className="rating">
+                        <Star size={16} className="star-icon" />
+                        {log.rating}/5
+                      </div>
+                      <div className="date">
+                        {new Date(log.listen_date).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
+        {activeSection === 'trending' && (
+          <motion.section 
+            className="trending-section"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+          >
+            <div className="album-grid">
+              {trendingAlbums.map((album) => (
+                <motion.div
+                  key={album.spotify_id}
+                  className="album-card"
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.05, y: -5 }}
+                >
+                  <img
+                    src={album.image_url}
+                    alt={`${album.name} by ${album.artist}`}
+                    className="album-cover"
+                  />
+                  <div className="album-info">
+                    <h3>{album.name}</h3>
+                    <p>{album.artist}</p>
+                  </div>
+                  <motion.button
+                    onClick={() => navigate('/log-album', { state: { album } })}
+                    className="log-button"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Plus size={20} />
+                    Log
+                  </motion.button>
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 

@@ -71,6 +71,29 @@ class FavoriteAlbum(models.Model):
     def __str__(self):
         return f"{self.album.name} by {self.album.artist}"
 
+class List(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='lists')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+class ListAlbum(models.Model):
+    list = models.ForeignKey('List', on_delete=models.CASCADE, related_name='albums')
+    spotify_id = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
+    artist = models.CharField(max_length=255)
+    image_url = models.URLField(max_length=500, blank=True)
+    release_date = models.CharField(max_length=50, blank=True)
+    external_url = models.URLField(max_length=500, blank=True)
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['list', 'spotify_id']
+
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:

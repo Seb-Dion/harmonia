@@ -8,19 +8,26 @@ from django.db.models import Avg
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from django.conf import settings
-from .models import Album, Log, Profile, FavoriteAlbum
+from .models import Album, Log, Profile, FavoriteAlbum, List, ListAlbum
 from .serializers import (
     UserSerializer,
     ProfileSerializer,
     AlbumSerializer,
     LogSerializer,
-    FavoriteAlbumSerializer
+    FavoriteAlbumSerializer,
+    ListAlbumSerializer,
+    ListSerializer
 )
 from rest_framework.parsers import MultiPartParser, FormParser
 from datetime import datetime
 from django.db import IntegrityError
 from django.contrib.auth.models import User
 from rest_framework import generics
+from rest_framework import viewsets
+from rest_framework.decorators import action
+import logging
+
+logger = logging.getLogger(__name__)
 
 class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -340,3 +347,110 @@ def register_user(request):
             {'error': str(e)},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+class ListViewSet(viewsets.ModelViewSet):
+    serializer_class = ListSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return List.objects.filter(user=self.request.user)
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            print(f"Retrieved list: {instance.title}")  # Debug log
+            print(f"Number of albums: {instance.albums.count()}")  # Debug log
+            
+            serializer = self.get_serializer(instance)
+            data = serializer.data
+            print(f"Serialized data: {data}")  # Debug log
+            
+            return Response(data)
+        except Exception as e:
+            print(f"Error retrieving list: {str(e)}")  # Debug log
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['post'])
+    def albums(self, request, pk=None):
+        list_obj = self.get_object()
+        
+        try:
+            # Add the list ID to the request data
+            album_data = request.data.copy()
+            album_data['list'] = list_obj.id
+            
+            # Check if album already exists in list
+            existing_album = ListAlbum.objects.filter(
+                list=list_obj,
+                spotify_id=album_data['spotify_id']
+            ).first()
+            
+            if existing_album:
+                return Response(
+                    {'error': 'Album already in list'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            serializer = ListAlbumSerializer(data=album_data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(
+                    {'error': 'Invalid data', 'details': serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['delete'])
+    def remove_album(self, request, pk=None):
+        list_obj = self.get_object()
+        album_id = request.query_params.get('album_id')
+        
+        try:
+            album = ListAlbum.objects.get(
+                list=list_obj,
+                spotify_id=album_id
+            )
+            album.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except ListAlbum.DoesNotExist:
+            return Response(
+                {'error': 'Album not found in list'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_trending_albums(request):
+    try:
+        spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(
+            client_id=settings.SPOTIFY_CLIENT_ID,
+            client_secret=settings.SPOTIFY_CLIENT_SECRET
+        ))
+        
+        # Get new releases instead of featured playlists
+        new_releases = spotify.new_releases(limit=20, country='US')
+        
+        trending_albums = []
+        for album in new_releases['albums']['items']:
+            trending_albums.append({
+                'spotify_id': album['id'],
+                'name': album['name'],
+                'artist': album['artists'][0]['name'],
+                'image_url': album['images'][0]['url'] if album['images'] else None,
+                'release_date': album['release_date']
+            })
+        
+        return Response(trending_albums)
+    except Exception as e:
+        print(f"Error in get_trending_albums: {str(e)}")  # Debug log
+        return Response({'error': str(e)}, status=400)
