@@ -454,3 +454,41 @@ def get_trending_albums(request):
     except Exception as e:
         print(f"Error in get_trending_albums: {str(e)}")  # Debug log
         return Response({'error': str(e)}, status=400)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_album_to_list(request, list_id):
+    try:
+        list_obj = List.objects.get(id=list_id, user=request.user)
+        album_data = request.data
+        
+        # Create or get the Album instance
+        album, created = Album.objects.get_or_create(
+            spotify_id=album_data['spotify_id'],
+            defaults={
+                'name': album_data['name'],
+                'artist': album_data['artist'],
+                'image_url': album_data['image_url'],
+                'release_date': album_data['release_date'],
+                'external_url': album_data.get('external_url', '')
+            }
+        )
+        
+        # Create a ListAlbum instance
+        list_album, created = ListAlbum.objects.get_or_create(
+            list=list_obj,
+            spotify_id=album.spotify_id,
+            defaults={
+                'name': album.name,
+                'artist': album.artist,
+                'image_url': album.image_url,
+                'release_date': album.release_date,
+                'external_url': album.external_url
+            }
+        )
+        
+        return Response({'message': 'Album added to list successfully'})
+    except List.DoesNotExist:
+        return Response({'error': 'List not found'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)

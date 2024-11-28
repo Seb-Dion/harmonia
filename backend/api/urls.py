@@ -14,7 +14,8 @@ from .views import (
     create_album,
     register_user,
     ListViewSet,
-    get_trending_albums
+    get_trending_albums,
+    add_album_to_list
 )
 
 router = DefaultRouter()
@@ -46,4 +47,7 @@ urlpatterns = [
 
     # Trending albums
     path('trending-albums/', get_trending_albums, name='trending-albums'),
+
+    # Add album to list
+    path('lists/<int:list_id>/add_album/', add_album_to_list, name='add-album-to-list'),
 ]

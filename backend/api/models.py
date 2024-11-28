@@ -18,10 +18,10 @@ class Profile(models.Model):
         return self.followers.count()
 
 class Album(models.Model):
-    spotify_id = models.CharField(max_length=100, unique=True)
-    name = models.CharField(max_length=200)
-    artist = models.CharField(max_length=200)
-    image_url = models.URLField(blank=True, null=True)
+    spotify_id = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
+    artist = models.CharField(max_length=255)
+    image_url = models.URLField()
     release_date = models.DateField()
     external_url = models.URLField(blank=True, null=True)
     genres = models.CharField(max_length=200, blank=True, null=True)

@@ -296,9 +296,9 @@ function Home() {
                         <Star size={16} className="star-icon" />
                         {log.rating}/5
                       </div>
-                      <div className="date">
+                      <span className="date">
                         {new Date(log.listen_date).toLocaleDateString()}
-                      </div>
+                      </span>
                     </div>
                   </div>
                 </motion.div>

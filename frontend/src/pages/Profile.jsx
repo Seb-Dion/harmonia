@@ -12,7 +12,6 @@ function Profile() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [bio, setBio] = useState("");
-  const [avatar, setAvatar] = useState(null);
   const [showAlbumSearch, setShowAlbumSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
