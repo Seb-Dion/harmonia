@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Music, X, Plus, Search, Logs, Pencil, Scroll } from "lucide-react";
+import { Music, X, Plus, Search, Logs, Pencil, Scroll, BarChart2, Clock, Star, Activity, Disc } from "lucide-react";
 import api from "../api/api";
-import "../styles/Profile.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { searchAlbums, getFavorites, addToFavorites, removeFavorite, getRecentLogs, getUserLists, createList, deleteList, addAlbumToList } from '../api/albums';
 import defaultAvatar from '../assets/default.png';
 import { useNavigate } from 'react-router-dom';
+import "../styles/profile/index.css";
 
 function Profile() {
   const [profile, setProfile] = useState(null);
@@ -22,7 +22,11 @@ function Profile() {
   const [stats, setStats] = useState({
     totalLogs: 0,
     thisYear: 0,
-    followers: 0
+    followers: 0,
+    lastMonth: 0,
+    averageRating: 0,
+    topArtist: '',
+    topGenre: ''
   });
   const [logs, setLogs] = useState([]);
   const [lists, setLists] = useState([]);
@@ -362,306 +366,353 @@ function Profile() {
         </div>
       </div>
 
-      {activeTab === 'profile' && (
-        <div className="profile-content">
-          <div className="profile-section">
-            <div className="recent-reviews">
-              <h2 className="section-title">
-                <Logs size={24} />
-                Recent Reviews
-              </h2>
-              {logs
-                .filter(log => log.review)
-                .slice(0, 3)
-                .map(log => (
-                  <div key={log.id} className="review-item">
-                    <img src={log.album.image_url || '/default-album-cover.png'} alt={log.album.name} className="review-album-review" />
-                    <div>
-                      <h3>{log.album.name}</h3>
-                      <div className="rating">
-                        {[...Array(5)].map((_, index) => (
-                          <span key={index} className={index < log.rating ? "star filled" : "star"}>
-                            ★
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="review-content">
-                      {log.review && <p className="review-text">{log.review}</p>}
-                      <p className="review-date">
-                        {new Date(log.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+      <div className="profile-overview">
+        <div className="listening-stats">
+          <h2 className="section-title">
+            <BarChart2 size={24} />
+            Listening Overview
+          </h2>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon">
+                <Clock size={20} />
+              </div>
+              <div className="stat-info">
+                <h3>Last 30 Days</h3>
+                <p className="stat-value">{stats.lastMonth || 0} albums</p>
+              </div>
             </div>
-          </div>
-
-          <div className="profile-section">
-            <h2 className="section-title">
-              <Music size={24} />
-              Favorite Albums
-              <span className="album-count">
-                ({favoriteAlbums?.length || 0}/4)
-              </span>
-            </h2>
-            <motion.div className="favorite-albums" layout>
-              <AnimatePresence mode="popLayout">
-                {console.log("Current favorites:", favoriteAlbums)}
-                {Array.isArray(favoriteAlbums) && favoriteAlbums.length > 0 ? (
-                  favoriteAlbums.map((favorite) => (
-                    <motion.div
-                      key={favorite.album.spotify_id}
-                      className="album-card"
-                      layout
-                    >
-                      <img
-                        src={favorite.album.image_url || '/default-album-cover.png'}
-                        alt={`${favorite.album.name} by ${favorite.album.artist}`}
-                        className="album-cover"
-                      />
-                      <div className="album-info">
-                        <h3>{favorite.album.name}</h3>
-                        <p>{favorite.album.artist}</p>
-                      </div>
-                      <div className="album-actions">
-                        <motion.button
-                          className="remove-favorite"
-                          onClick={() => handleRemoveFavorite(favorite.album.spotify_id)}
-                        >
-                          <X size={16} />
-                        </motion.button>
-                        <motion.button
-                          className="add-to-list-button"
-                          onClick={() => {
-                            setSelectedAlbum(favorite.album);
-                            setShowAddToList(true);
-                          }}
-                        >
-                          <Scroll size={16} />
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="no-favorites">
-                    No favorite albums yet
-                  </div>
-                )}
-                
-                {favoriteAlbums.length < 4 && (
-                  <motion.button
-                    key="add-favorite-button"
-                    className="add-favorite-button"
-                    onClick={() => setShowAlbumSearch(true)}
-                  >
-                    <Plus size={24} />
-                    Add Favorite
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </motion.div>
-
-            <AnimatePresence>
-              {showAlbumSearch && (
-                <motion.div
-                  key="search-modal"
-                  className="album-search-modal"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <motion.div
-                    className="modal-content"
-                    initial={{ y: 50, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 50, opacity: 0 }}
-                    transition={{ type: "spring", damping: 25 }}
-                  >
-                    <div className="modal-header">
-                      <h3>Search Albums</h3>
-                      <button
-                        className="close-button"
-                        onClick={() => {
-                          setShowAlbumSearch(false);
-                          setSearchResults([]);
-                          setSearchQuery("");
-                        }}
-                      >
-                        <X size={24} />
-                      </button>
-                    </div>
-
-                    <form onSubmit={handleSearch} className="search-form">
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search for albums..."
-                      />
-                      <button type="submit">
-                        <Search size={20} />
-                      </button>
-                    </form>
-
-                    <div className="search-results">
-                      {searchLoading ? (
-                        <div className="loading">Searching...</div>
-                      ) : Array.isArray(searchResults) && searchResults.length > 0 ? (
-                        searchResults
-                          .filter(album => album && album.id)
-                          .map((album) => (
-                            <div
-                              key={`search-${album.id}-${Date.now()}`}
-                              className="search-result-item"
-                            >
-                              <img
-                                src={getAlbumImageUrl(album)}
-                                alt={getAlbumName(album)}
-                                onError={(e) => {
-                                  e.target.src = "/default-album-cover.png";
-                                }}
-                              />
-                              <div className="result-info">
-                                <h4>{getAlbumName(album)}</h4>
-                                <p>{getArtistName(album)}</p>
-                              </div>
-                              <div className="result-actions">
-                                <button
-                                  className="add-button"
-                                  onClick={() => Favorite(album)}
-                                >
-                                  <Plus size={20} />
-                                </button>
-                                <button
-                                  className="add-to-list-button"
-                                  onClick={() => {
-                                    setSelectedAlbum(album);
-                                    setShowAddToList(true);
-                                  }}
-                                >
-                                  <Scroll size={20} />
-                                </button>
-                              </div>
-                            </div>
-                          ))
-                      ) : (
-                        <div className="no-results">
-                          {searchQuery.trim()
-                            ? "No albums found"
-                            : "Search for albums to add to your favorites"}
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="lists-container">
-            <div className="lists-section-header">
-              <h2 className="section-title">
-                <Scroll size={24} />
-                Your Lists
-              </h2>
-              <button 
-                className="create-list-button"
-                onClick={() => setShowCreateList(true)}
-              >
-                <Plus size={20} />
-                Create List
-              </button>
+            <div className="stat-card">
+              <div className="stat-icon">
+                <Star size={20} />
+              </div>
+              <div className="stat-info">
+                <h3>Average Rating</h3>
+                <p className="stat-value">{stats.averageRating?.toFixed(1) || '0.0'} ★</p>
+              </div>
             </div>
-
-            <div className="lists-grid">
-              {lists.map(list => (
-                <motion.div 
-                  key={list.id} 
-                  className="list-card"
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  onClick={() => navigate(`/lists/${list.id}`)}
-                >
-                  <h3>{list.title}</h3>
-                  <p>{list.description}</p>
-                  <div className="list-meta">
-                    <span>{list.album_count || 0} albums</span>
-                    <button
-                      className="delete-list"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteList(list.id);
-                      }}
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
+            <div className="stat-card">
+              <div className="stat-icon">
+                <Music size={20} />
+              </div>
+              <div className="stat-info">
+                <h3>Most Logged Artist</h3>
+                <p className="stat-value">{stats.topArtist || 'None yet'}</p>
+              </div>
             </div>
-
-            <AnimatePresence>
-              {showCreateList && (
-                <motion.div
-                  className="create-list-modal"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <motion.div
-                    className="modal-content"
-                    initial={{ y: 50, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 50, opacity: 0 }}
-                  >
-                    <div className="modal-header">
-                      <h3>Create New List</h3>
-                      <button
-                        className="close-button"
-                        onClick={() => setShowCreateList(false)}
-                      >
-                        <X size={24} />
-                      </button>
-                    </div>
-
-                    <form onSubmit={handleCreateList} className="create-list-form">
-                      <div className="form-group">
-                        <label htmlFor="list-title">List Title</label>
-                        <input
-                          id="list-title"
-                          type="text"
-                          value={newListTitle}
-                          onChange={(e) => setNewListTitle(e.target.value)}
-                          placeholder="e.g., Top 10 Albums of 2023"
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="list-description">Description (optional)</label>
-                        <textarea
-                          id="list-description"
-                          value={newListDescription}
-                          onChange={(e) => setNewListDescription(e.target.value)}
-                          placeholder="Add a description for your list..."
-                          rows={3}
-                        />
-                      </div>
-                      <div className="form-actions">
-                        <button type="submit" className="submit-button">
-                          Create List
-                        </button>
-                      </div>
-                    </form>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div className="stat-card">
+              <div className="stat-icon">
+                <Disc size={20} />
+              </div>
+              <div className="stat-info">
+                <h3>Most Common Genre</h3>
+                <p className="stat-value">{stats.topGenre || 'None yet'}</p>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+      </div>
+
+      <div className="profile-grid">
+        <div className="profile-section">
+          <div className="recent-reviews">
+            <h2 className="section-title">
+              <Logs size={24} />
+              Recent Reviews
+            </h2>
+            {logs
+              .filter(log => log.review)
+              .slice(0, 3)
+              .map(log => (
+                <div key={log.id} className="review-item">
+                  <img src={log.album.image_url || '/default-album-cover.png'} alt={log.album.name} className="review-album-review" />
+                  <div>
+                    <h3>{log.album.name}</h3>
+                    <div className="rating">
+                      {[...Array(5)].map((_, index) => (
+                        <span key={index} className={index < log.rating ? "star filled" : "star"}>
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="review-content">
+                    {log.review && <p className="review-text">{log.review}</p>}
+                    <p className="review-date">
+                      {new Date(log.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        <div className="profile-section">
+          <h2 className="section-title">
+            <Music size={24} />
+            Favorite Albums
+            <span className="album-count">
+              ({favoriteAlbums?.length || 0}/4)
+            </span>
+          </h2>
+          <motion.div className="favorite-albums" layout>
+            <AnimatePresence mode="popLayout">
+              {console.log("Current favorites:", favoriteAlbums)}
+              {Array.isArray(favoriteAlbums) && favoriteAlbums.length > 0 ? (
+                favoriteAlbums.map((favorite) => (
+                  <motion.div
+                    key={favorite.album.spotify_id}
+                    className="album-card"
+                    layout
+                  >
+                    <img
+                      src={favorite.album.image_url || '/default-album-cover.png'}
+                      alt={`${favorite.album.name} by ${favorite.album.artist}`}
+                      className="album-cover"
+                    />
+                    <div className="album-info">
+                      <h3>{favorite.album.name}</h3>
+                      <p>{favorite.album.artist}</p>
+                    </div>
+                    <div className="album-actions">
+                      <motion.button
+                        className="remove-favorite"
+                        onClick={() => handleRemoveFavorite(favorite.album.spotify_id)}
+                      >
+                        <X size={16} />
+                      </motion.button>
+                      <motion.button
+                        className="add-to-list-button"
+                        onClick={() => {
+                          setSelectedAlbum(favorite.album);
+                          setShowAddToList(true);
+                        }}
+                      >
+                        <Scroll size={16} />
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="no-favorites">
+                  No favorite albums yet
+                </div>
+              )}
+              
+              {favoriteAlbums.length < 4 && (
+                <motion.button
+                  key="add-favorite-button"
+                  className="add-favorite-button"
+                  onClick={() => setShowAlbumSearch(true)}
+                >
+                  <Plus size={24} />
+                  Add Favorite
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
+          <AnimatePresence>
+            {showAlbumSearch && (
+              <motion.div
+                key="search-modal"
+                className="album-search-modal"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <motion.div
+                  className="modal-content"
+                  initial={{ y: 50, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 50, opacity: 0 }}
+                  transition={{ type: "spring", damping: 25 }}
+                >
+                  <div className="modal-header">
+                    <h3>Search Albums</h3>
+                    <button
+                      className="close-button"
+                      onClick={() => {
+                        setShowAlbumSearch(false);
+                        setSearchResults([]);
+                        setSearchQuery("");
+                      }}
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSearch} className="search-form">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search for albums..."
+                    />
+                    <button type="submit">
+                      <Search size={20} />
+                    </button>
+                  </form>
+
+                  <div className="search-results">
+                    {searchLoading ? (
+                      <div className="loading">Searching...</div>
+                    ) : Array.isArray(searchResults) && searchResults.length > 0 ? (
+                      searchResults
+                        .filter(album => album && album.id)
+                        .map((album) => (
+                          <div
+                            key={`search-${album.id}-${Date.now()}`}
+                            className="search-result-item"
+                          >
+                            <img
+                              src={getAlbumImageUrl(album)}
+                              alt={getAlbumName(album)}
+                              onError={(e) => {
+                                e.target.src = "/default-album-cover.png";
+                              }}
+                            />
+                            <div className="result-info">
+                              <h4>{getAlbumName(album)}</h4>
+                              <p>{getArtistName(album)}</p>
+                            </div>
+                            <div className="result-actions">
+                              <button
+                                className="add-button"
+                                onClick={() => Favorite(album)}
+                              >
+                                <Plus size={20} />
+                              </button>
+                              <button
+                                className="add-to-list-button"
+                                onClick={() => {
+                                  setSelectedAlbum(album);
+                                  setShowAddToList(true);
+                                }}
+                              >
+                                <Scroll size={20} />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                    ) : (
+                      <div className="no-results">
+                        {searchQuery.trim()
+                          ? "No albums found"
+                          : "Search for albums to add to your favorites"}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <div className="profile-section">
+        <div className="lists-container">
+          <div className="lists-section-header">
+            <h2 className="section-title">
+              <Scroll size={24} />
+              Your Lists
+            </h2>
+            <button 
+              className="create-list-button"
+              onClick={() => setShowCreateList(true)}
+            >
+              <Plus size={20} />
+              Create List
+            </button>
+          </div>
+
+          <div className="lists-grid">
+            {lists.map(list => (
+              <motion.div 
+                key={list.id} 
+                className="list-card"
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                onClick={() => navigate(`/lists/${list.id}`)}
+              >
+                <h3>{list.title}</h3>
+                <p>{list.description}</p>
+                <div className="list-meta">
+                  <span>{list.album_count || 0} albums</span>
+                  <button
+                    className="delete-list"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteList(list.id);
+                    }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <AnimatePresence>
+            {showCreateList && (
+              <motion.div
+                className="create-list-modal"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <motion.div
+                  className="modal-content"
+                  initial={{ y: 50, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 50, opacity: 0 }}
+                >
+                  <div className="modal-header">
+                    <h3>Create New List</h3>
+                    <button
+                      className="close-button"
+                      onClick={() => setShowCreateList(false)}
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleCreateList} className="create-list-form">
+                    <div className="form-group">
+                      <label htmlFor="list-title">List Title</label>
+                      <input
+                        id="list-title"
+                        type="text"
+                        value={newListTitle}
+                        onChange={(e) => setNewListTitle(e.target.value)}
+                        placeholder="e.g., Top 10 Albums of 2023"
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="list-description">Description (optional)</label>
+                      <textarea
+                        id="list-description"
+                        value={newListDescription}
+                        onChange={(e) => setNewListDescription(e.target.value)}
+                        placeholder="Add a description for your list..."
+                        rows={3}
+                      />
+                    </div>
+                    <div className="form-actions">
+                      <button type="submit" className="submit-button">
+                        Create List
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
 
       {error && (
         <div className="error-message" style={{ color: 'red', marginTop: '10px' }}>

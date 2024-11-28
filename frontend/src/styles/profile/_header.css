@@ -1,0 +1,35 @@
+@import '../../vars.css';
+
+.profile-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 2rem;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 2rem;
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-lg);
+    margin-bottom: 2rem;
+}
+
+.profile-info {
+    flex: 1;
+}
+
+.profile-username {
+    font-family: var(--font-heading);
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+}
+
+.username-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}

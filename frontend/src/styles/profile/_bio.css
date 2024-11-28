@@ -1,0 +1,30 @@
+@import '../../vars.css';
+
+.bio-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bio-text {
+    color: var(--color-text);
+    font-size: 1rem;
+    line-height: 1.6;
+    font-family: var(--font-body);
+}
+
+.bio-edit-button {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    opacity: 0.7;
+}
+
+.bio-edit-button:hover {
+    opacity: 1;
+}

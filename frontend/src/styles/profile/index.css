@@ -1,0 +1,31 @@
+@import '../../vars.css';
+@import './_layout.css';
+@import './_header.css';
+@import './_avatar.css';
+@import './_bio.css';
+@import './_stats.css';
+@import './_lists.css';
+@import './_modals.css';
+@import './_favorites.css';
+@import './_reviews.css';
+@import './_responsive.css';
+
+/* Any global profile styles can go here */
+.profile-section {
+    background: var(--color-bg-elevated);
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    color: var(--color-text);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}

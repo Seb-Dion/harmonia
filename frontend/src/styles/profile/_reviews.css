@@ -1,0 +1,113 @@
+@import '../../vars.css';
+
+.reviews-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.review-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+}
+
+.review-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.review-album-cover {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+}
+
+.review-album-info {
+    flex: 1;
+}
+
+.review-album-title {
+    font-weight: 600;
+    margin: 0;
+    color: var(--color-text);
+}
+
+.review-album-artist {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    margin: 0.25rem 0 0 0;
+}
+
+.review-rating {
+    display: flex;
+    gap: 2px;
+    color: var(--color-primary);
+    margin: 0.5rem 0;
+}
+
+.review-text {
+    color: var(--color-text);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.recent-reviews {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.review-item {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+}
+
+.review-album-review {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+}
+
+.review-content {
+    grid-column: 1 / -1;
+    margin-top: 0.5rem;
+}
+
+.rating {
+    display: flex;
+    gap: 2px;
+    margin: 0.25rem 0;
+}
+
+.star {
+    color: var(--color-text-muted);
+}
+
+.star.filled {
+    color: var(--color-primary);
+}
+
+.review-text {
+    color: var(--color-text);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.review-date {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin: 0.5rem 0 0 0;
+}
