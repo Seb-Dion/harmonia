@@ -14,6 +14,10 @@
     aspect-ratio: 1;
     border-radius: 8px;
     overflow: hidden;
+    cursor: pointer;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    transition: transform 0.2s ease;
 }
 
 .album-cover {
@@ -43,6 +47,24 @@
     opacity: 1;
 }
 
+.album-info h3 {
+    font-size: 1rem;
+    font-weight: 500;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.album-info p {
+    font-size: 0.875rem;
+    margin: 0;
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .remove-favorite {
     position: absolute;
     top: 0.5rem;
@@ -61,4 +83,62 @@
 
 .favorite-icon {
     filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
+}
+
+/* Add Favorite Button */
+.add-favorite-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--color-bg-elevated);
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    will-change: transform;
+}
+
+.add-favorite-button:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: var(--color-bg-highlight);
+}
+
+.no-favorites {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--color-text-muted);
+    padding: 2rem;
+}
+
+.album-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.add-to-list-button {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+}
+
+.add-to-list-button:hover {
+    opacity: 1;
+    color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+    .favorite-albums {
+        grid-template-columns: 1fr;
+    }
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, History, Star, Disc, TrendingUp, Clock, Award, X } from 'lucide-react';
+import { Search, Plus, History, Star, Disc, TrendingUp, Clock, Award, X, Scroll } from 'lucide-react';
 import api from '../api/api';
 import '../styles/Home.css';
 import { ACCESS_TOKEN } from '../constants';
@@ -195,6 +195,25 @@ function Home() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
           >
+            <div className="hero-section">
+              <motion.h1 
+                className="app-title"
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                harmonia
+              </motion.h1>
+              <motion.p 
+                className="app-subtitle"
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                Your personal music journey starts here
+              </motion.p>
+            </div>
+
             <form onSubmit={handleSearch} className="search-form">
               <div className="search-input-container">
                 <input 
@@ -222,48 +241,40 @@ function Home() {
               </div>
             </form>
 
-            {error && (
-              <motion.div 
-                className="error-message"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                {error}
-              </motion.div>
-            )}
-
-            <motion.div 
-              className="album-grid"
-              variants={containerVariants}
-            >
-              {searchResults.map((album) => (
-                <motion.div
-                  key={album.spotify_id}
-                  className="album-card"
-                  variants={itemVariants}
-                  whileHover={{ scale: 1.05, y: -5 }}
-                >
-                  <img
-                    src={album.image_url}
-                    alt={`${album.name} by ${album.artist}`}
-                    className="album-cover"
-                  />
-                  <div className="album-info">
-                    <h3>{album.name}</h3>
-                    <p>{album.artist}</p>
-                  </div>
-                  <motion.button
-                    onClick={() => navigate('/log-album', { state: { album } })}
-                    className="log-button"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+            <div className="search-results-section">
+              {searchResults.length > 0 && (
+                <h2 className="section-title">Search Results</h2>
+              )}
+              <motion.div className="album-grid">
+                {searchResults.map((album) => (
+                  <motion.div
+                    key={album.spotify_id}
+                    className="album-card"
+                    variants={itemVariants}
+                    whileHover={{ scale: 1.05, y: -5 }}
                   >
-                    <Plus size={20} />
-                    Log
-                  </motion.button>
-                </motion.div>
-              ))}
-            </motion.div>
+                    <img
+                      src={album.image_url}
+                      alt={`${album.name} by ${album.artist}`}
+                      className="album-cover"
+                    />
+                    <div className="album-info">
+                      <h3>{album.name}</h3>
+                      <p>{album.artist}</p>
+                    </div>
+                    <motion.button
+                      onClick={() => navigate('/log-album', { state: { album } })}
+                      className="log-button"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <Plus size={20} />
+                      Log
+                    </motion.button>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </div>
           </motion.section>
         )}
 

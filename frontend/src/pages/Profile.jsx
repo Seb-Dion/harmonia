@@ -299,6 +299,19 @@ function Profile() {
     return albumData.artist || 'Unknown Artist';
   };
 
+  const closeModal = (e, setter) => {
+    if (e.target === e.currentTarget) {
+      setter(false);
+      if (setter === setShowAlbumSearch) {
+        setSearchResults([]);
+        setSearchQuery("");
+      }
+      if (setter === setShowAddToList) {
+        setSelectedAlbum(null);
+      }
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
 
   console.log("Current profile state:", profile);
@@ -511,102 +524,6 @@ function Profile() {
               )}
             </AnimatePresence>
           </motion.div>
-
-          <AnimatePresence>
-            {showAlbumSearch && (
-              <motion.div
-                key="search-modal"
-                className="album-search-modal"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                <motion.div
-                  className="modal-content"
-                  initial={{ y: 50, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 50, opacity: 0 }}
-                  transition={{ type: "spring", damping: 25 }}
-                >
-                  <div className="modal-header">
-                    <h3>Search Albums</h3>
-                    <button
-                      className="close-button"
-                      onClick={() => {
-                        setShowAlbumSearch(false);
-                        setSearchResults([]);
-                        setSearchQuery("");
-                      }}
-                    >
-                      <X size={24} />
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleSearch} className="search-form">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search for albums..."
-                    />
-                    <button type="submit">
-                      <Search size={20} />
-                    </button>
-                  </form>
-
-                  <div className="search-results">
-                    {searchLoading ? (
-                      <div className="loading">Searching...</div>
-                    ) : Array.isArray(searchResults) && searchResults.length > 0 ? (
-                      searchResults
-                        .filter(album => album && album.id)
-                        .map((album) => (
-                          <div
-                            key={`search-${album.id}-${Date.now()}`}
-                            className="search-result-item"
-                          >
-                            <img
-                              src={getAlbumImageUrl(album)}
-                              alt={getAlbumName(album)}
-                              onError={(e) => {
-                                e.target.src = "/default-album-cover.png";
-                              }}
-                            />
-                            <div className="result-info">
-                              <h4>{getAlbumName(album)}</h4>
-                              <p>{getArtistName(album)}</p>
-                            </div>
-                            <div className="result-actions">
-                              <button
-                                className="add-button"
-                                onClick={() => Favorite(album)}
-                              >
-                                <Plus size={20} />
-                              </button>
-                              <button
-                                className="add-to-list-button"
-                                onClick={() => {
-                                  setSelectedAlbum(album);
-                                  setShowAddToList(true);
-                                }}
-                              >
-                                <Scroll size={20} />
-                              </button>
-                            </div>
-                          </div>
-                        ))
-                    ) : (
-                      <div className="no-results">
-                        {searchQuery.trim()
-                          ? "No albums found"
-                          : "Search for albums to add to your favorites"}
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
 
@@ -639,6 +556,26 @@ function Profile() {
               >
                 <h3>{list.title}</h3>
                 <p>{list.description}</p>
+                
+                {/* Album Preview Section */}
+                <div className="list-preview">
+                  {list.albums && list.albums.slice(0, 3).map((album) => (
+                    <img
+                      key={album.id}
+                      src={album.image_url || '/default-album-cover.png'}
+                      alt={album.name}
+                      className="preview-album"
+                      onError={(e) => {
+                        e.target.src = "/default-album-cover.png";
+                      }}
+                    />
+                  ))}
+                  {/* Add placeholder albums if less than 3 albums */}
+                  {list.albums && [...Array(Math.max(0, 3 - list.albums.length))].map((_, i) => (
+                    <div key={`placeholder-${i}`} className="preview-album-placeholder" />
+                  ))}
+                </div>
+
                 <div className="list-meta">
                   <span>{list.album_count || 0} albums</span>
                   <button
@@ -654,63 +591,6 @@ function Profile() {
               </motion.div>
             ))}
           </div>
-
-          <AnimatePresence>
-            {showCreateList && (
-              <motion.div
-                className="create-list-modal"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                <motion.div
-                  className="modal-content"
-                  initial={{ y: 50, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 50, opacity: 0 }}
-                >
-                  <div className="modal-header">
-                    <h3>Create New List</h3>
-                    <button
-                      className="close-button"
-                      onClick={() => setShowCreateList(false)}
-                    >
-                      <X size={24} />
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleCreateList} className="create-list-form">
-                    <div className="form-group">
-                      <label htmlFor="list-title">List Title</label>
-                      <input
-                        id="list-title"
-                        type="text"
-                        value={newListTitle}
-                        onChange={(e) => setNewListTitle(e.target.value)}
-                        placeholder="e.g., Top 10 Albums of 2023"
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="list-description">Description (optional)</label>
-                      <textarea
-                        id="list-description"
-                        value={newListDescription}
-                        onChange={(e) => setNewListDescription(e.target.value)}
-                        placeholder="Add a description for your list..."
-                        rows={3}
-                      />
-                    </div>
-                    <div className="form-actions">
-                      <button type="submit" className="submit-button">
-                        Create List
-                      </button>
-                    </div>
-                  </form>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
 
@@ -721,6 +601,154 @@ function Profile() {
       )}
 
       <AnimatePresence>
+        {showAlbumSearch && (
+          <motion.div
+            key="search-modal"
+            className="album-search-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="modal-content"
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+            >
+              <div className="modal-header">
+                <h3>Search Albums</h3>
+                <button
+                  className="close-button"
+                  onClick={() => {
+                    setShowAlbumSearch(false);
+                    setSearchResults([]);
+                    setSearchQuery("");
+                  }}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSearch} className="search-form">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search for albums..."
+                />
+                <button type="submit">
+                  <Search size={20} />
+                </button>
+              </form>
+
+              <div className="search-results">
+                {searchLoading ? (
+                  <div className="loading">Searching...</div>
+                ) : Array.isArray(searchResults) && searchResults.length > 0 ? (
+                  searchResults
+                    .filter(album => album && album.id)
+                    .map((album) => (
+                      <div
+                        key={`search-${album.id}-${Date.now()}`}
+                        className="search-result-item"
+                      >
+                        <img
+                          src={getAlbumImageUrl(album)}
+                          alt={getAlbumName(album)}
+                          onError={(e) => {
+                            e.target.src = "/default-album-cover.png";
+                          }}
+                        />
+                        <div className="result-info">
+                          <h4>{getAlbumName(album)}</h4>
+                          <p>{getArtistName(album)}</p>
+                        </div>
+                        <div className="result-actions">
+                          <button
+                            className="add-button"
+                            onClick={() => Favorite(album)}
+                          >
+                            <Plus size={20} />
+                          </button>
+                          <button
+                            className="add-to-list-button"
+                            onClick={() => {
+                              setSelectedAlbum(album);
+                              setShowAddToList(true);
+                            }}
+                          >
+                            <Scroll size={20} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                ) : (
+                  <div className="no-results">
+                    {searchQuery.trim()
+                      ? "No albums found"
+                      : "Search for albums to add to your favorites"}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {showCreateList && (
+          <motion.div
+            className="create-list-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="modal-content"
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+            >
+              <div className="modal-header">
+                <h3>Create New List</h3>
+                <button
+                  className="close-button"
+                  onClick={() => setShowCreateList(false)}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateList} className="create-list-form">
+                <div className="form-group">
+                  <label htmlFor="list-title">List Title</label>
+                  <input
+                    id="list-title"
+                    type="text"
+                    value={newListTitle}
+                    onChange={(e) => setNewListTitle(e.target.value)}
+                    placeholder="e.g., Top 10 Albums of 2023"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="list-description">Description (optional)</label>
+                  <textarea
+                    id="list-description"
+                    value={newListDescription}
+                    onChange={(e) => setNewListDescription(e.target.value)}
+                    placeholder="Add a description for your list..."
+                    rows={3}
+                  />
+                </div>
+                <div className="form-actions">
+                  <button type="submit" className="submit-button">
+                    Create List
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+
         {showAddToList && selectedAlbum && (
           <motion.div
             className="add-to-list-modal"
@@ -765,7 +793,6 @@ function Profile() {
                   </p>
                 )}
               </div>
-            
             </motion.div>
           </motion.div>
         )}

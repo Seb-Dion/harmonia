@@ -32,6 +32,8 @@
     padding: 1.5rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
 }
 
 .list-card:hover {
@@ -90,4 +92,26 @@
     .lists-grid {
         grid-template-columns: 1fr;
     }
+}
+
+.list-preview {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.preview-album {
+    width: 50px;
+    height: 50px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    box-shadow: var(--shadow-sm);
+}
+
+.preview-album-placeholder {
+    width: 50px;
+    height: 50px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-elevated);
+    border: 1px dashed var(--color-border);
 }

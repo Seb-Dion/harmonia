@@ -289,3 +289,78 @@
 .date {
     font-size: 0.75rem;
 }
+
+/* Hero Section */
+.hero-section {
+  text-align: center;
+  margin: 2rem 0 4rem;
+}
+
+.app-title {
+  font-size: 5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0;
+  letter-spacing: -2px;
+  font-family: var(--font-heading);
+}
+
+.app-subtitle {
+  font-size: 1.25rem;
+  color: var(--color-text-muted);
+  margin: 1rem 0 0;
+}
+
+/* Quick Actions */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin: 3rem 0;
+}
+
+.action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  background: var(--color-bg-elevated);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-card:hover {
+  border-color: var(--color-primary);
+  background: var(--color-bg-highlight);
+}
+
+.action-card svg {
+  color: var(--color-primary);
+}
+
+.action-card span {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.section-title {
+  font-size: 1.5rem;
+  color: var(--color-text);
+  margin: 2rem 0 1rem;
+  font-family: var(--font-heading);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .app-title {
+    font-size: 3rem;
+  }
+  
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
+}
