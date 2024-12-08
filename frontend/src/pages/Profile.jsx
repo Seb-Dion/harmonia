@@ -1,10 +1,33 @@
 import React, { useState, useEffect } from "react";
-import { Music, X, Plus, Search, Logs, Pencil, Scroll, BarChart2, Clock, Star, Activity, Disc } from "lucide-react";
+import {
+  Music,
+  X,
+  Plus,
+  Search,
+  Logs,
+  Pencil,
+  Scroll,
+  BarChart2,
+  Clock,
+  Star,
+  Activity,
+  Disc,
+} from "lucide-react";
 import api from "../api/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { searchAlbums, getFavorites, addToFavorites, removeFavorite, getRecentLogs, getUserLists, createList, deleteList, addAlbumToList } from '../api/albums';
-import defaultAvatar from '../assets/default.png';
-import { useNavigate } from 'react-router-dom';
+import {
+  searchAlbums,
+  getFavorites,
+  addToFavorites,
+  removeFavorite,
+  getRecentLogs,
+  getUserLists,
+  createList,
+  deleteList,
+  addAlbumToList,
+} from "../api/albums";
+import defaultAvatar from "../assets/default.png";
+import { useNavigate } from "react-router-dom";
 import "../styles/profile/index.css";
 
 function Profile() {
@@ -18,21 +41,21 @@ function Profile() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [error, setError] = useState(null);
   const [favoriteAlbums, setFavoriteAlbums] = useState([]);
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState("profile");
   const [stats, setStats] = useState({
     totalLogs: 0,
     thisYear: 0,
     followers: 0,
     lastMonth: 0,
     averageRating: 0,
-    topArtist: '',
-    topGenre: ''
+    topArtist: "",
+    topGenre: "",
   });
   const [logs, setLogs] = useState([]);
   const [lists, setLists] = useState([]);
   const [showCreateList, setShowCreateList] = useState(false);
-  const [newListTitle, setNewListTitle] = useState('');
-  const [newListDescription, setNewListDescription] = useState('');
+  const [newListTitle, setNewListTitle] = useState("");
+  const [newListDescription, setNewListDescription] = useState("");
   const [showAddToList, setShowAddToList] = useState(false);
   const [selectedAlbum, setSelectedAlbum] = useState(null);
   const navigate = useNavigate();
@@ -43,20 +66,24 @@ function Profile() {
         console.log("Fetching profile data...");
         const [profileRes, favoritesRes] = await Promise.all([
           api.get("/api/user/profile/"),
-          getFavorites()
+          getFavorites(),
         ]);
-        
+
         console.log("Profile response:", profileRes.data);
         console.log("Favorites response:", favoritesRes);
-        
+
         setProfile(profileRes.data);
         setFavoriteAlbums(favoritesRes || []);
         setStats({
           totalLogs: profileRes.data.total_logs || 0,
           thisYear: profileRes.data.logs_this_year || 0,
-          followers: profileRes.data.followers || 0
+          followers: profileRes.data.followers_count || 0,
+          lastMonth: profileRes.data.lastMonth || 0,
+          averageRating: profileRes.data.averageRating || 0,
+          topArtist: profileRes.data.topArtist || "None yet",
+          topGenre: profileRes.data.topGenre || "None yet",
         });
-        
+
         setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -74,10 +101,10 @@ function Profile() {
         const logsData = await getRecentLogs();
         setLogs(logsData);
       } catch (error) {
-        console.error('Error fetching logs:', error);
+        console.error("Error fetching logs:", error);
       }
     };
-    
+
     fetchLogs();
   }, []);
 
@@ -87,10 +114,10 @@ function Profile() {
         const listsData = await getUserLists();
         setLists(listsData);
       } catch (error) {
-        console.error('Error fetching lists:', error);
+        console.error("Error fetching lists:", error);
       }
     };
-    
+
     fetchLists();
   }, []);
 
@@ -99,14 +126,14 @@ function Profile() {
     if (file) {
       const formData = new FormData();
       formData.append("avatar", file);
-      
+
       try {
         await api.patch("/api/user/profile/", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
         });
-        
+
         const profileResponse = await api.get("/api/user/profile/");
         setProfile(profileResponse.data);
       } catch (error) {
@@ -126,7 +153,7 @@ function Profile() {
           "Content-Type": "multipart/form-data",
         },
       });
-      
+
       const profileResponse = await api.get("/api/user/profile/");
       setProfile(profileResponse.data);
       setEditing(false);
@@ -139,38 +166,37 @@ function Profile() {
   const Favorite = async (album) => {
     try {
       console.log("Adding album to favorites:", album);
-      
+
       if (profile?.favorite_albums?.length >= 4) {
-        setError('Maximum number of favorites (4) reached');
+        setError("Maximum number of favorites (4) reached");
         return;
       }
-      
+
       await addToFavorites(album);
-      
+
       const [profileResponse, favoritesResponse] = await Promise.all([
         api.get("/api/user/profile/"),
-        getFavorites()
+        getFavorites(),
       ]);
-      
+
       setProfile(profileResponse.data);
       setFavoriteAlbums(favoritesResponse || []);
-      
+
       setShowAlbumSearch(false);
       setSearchQuery("");
       setSearchResults([]);
       setError(null);
-      
     } catch (error) {
-      console.error('Failed to add favorite:', error);
-      setError(error.message || 'Failed to add album to favorites');
+      console.error("Failed to add favorite:", error);
+      setError(error.message || "Failed to add album to favorites");
     }
   };
 
   const handleRemoveFavorite = async (albumId) => {
     try {
       if (!albumId) {
-        console.error('Invalid album ID:', albumId);
-        setError('Cannot remove album: Invalid ID');
+        console.error("Invalid album ID:", albumId);
+        setError("Cannot remove album: Invalid ID");
         return;
       }
       await removeFavorite(albumId);
@@ -179,8 +205,8 @@ function Profile() {
       const favoritesResponse = await getFavorites();
       setFavoriteAlbums(favoritesResponse || []);
     } catch (error) {
-      console.error('Failed to remove favorite:', error);
-      setError('Failed to remove album from favorites');
+      console.error("Failed to remove favorite:", error);
+      setError("Failed to remove album from favorites");
     }
   };
 
@@ -189,20 +215,23 @@ function Profile() {
     if (!searchQuery.trim()) return;
 
     setSearchLoading(true);
-    setError('');
-    
+    setError("");
+
     try {
       const data = await searchAlbums(searchQuery);
       console.log("Search results:", data); // Debug log
       if (data.albums?.items) {
-        console.log("Valid albums:", data.albums.items.filter(album => album && album.id)); // Debug log
+        console.log(
+          "Valid albums:",
+          data.albums.items.filter((album) => album && album.id)
+        ); // Debug log
         setSearchResults(data.albums.items);
       } else {
-        setError('No albums found');
+        setError("No albums found");
       }
     } catch (error) {
-      console.error('Search error:', error);
-      setError(error.response?.data?.error || 'Failed to search albums');
+      console.error("Search error:", error);
+      setError(error.response?.data?.error || "Failed to search albums");
     } finally {
       setSearchLoading(false);
     }
@@ -213,90 +242,96 @@ function Profile() {
     try {
       const newList = await createList({
         title: newListTitle,
-        description: newListDescription
+        description: newListDescription,
       });
       setLists([...lists, newList]);
       setShowCreateList(false);
-      setNewListTitle('');
-      setNewListDescription('');
+      setNewListTitle("");
+      setNewListDescription("");
     } catch (error) {
-      console.error('Error creating list:', error);
-      setError('Failed to create list');
+      console.error("Error creating list:", error);
+      setError("Failed to create list");
     }
   };
 
   const handleDeleteList = async (listId) => {
     try {
       await deleteList(listId);
-      setLists(lists.filter(list => list.id !== listId));
+      setLists(lists.filter((list) => list.id !== listId));
     } catch (error) {
-      console.error('Error deleting list:', error);
-      setError('Failed to delete list');
+      console.error("Error deleting list:", error);
+      setError("Failed to delete list");
     }
   };
 
   const handleAddToList = async (listId, album) => {
     try {
-      console.log('Adding album to list:', { listId, album }); // Debug log
+      console.log("Adding album to list:", { listId, album }); // Debug log
       await addAlbumToList(listId, {
         spotify_id: album.id,
         name: album.name,
         artist: album.artists?.[0]?.name || album.artist,
         image_url: album.images?.[0]?.url || album.image_url,
-        release_date: album.release_date || '',
-        external_url: album.external_urls?.spotify || album.external_url || ''
+        release_date: album.release_date || "",
+        external_url: album.external_urls?.spotify || album.external_url || "",
       });
-      
+
       const listsData = await getUserLists();
       setLists(listsData);
-      
+
       setShowAddToList(false);
       setSelectedAlbum(null);
       setError(null);
     } catch (error) {
-      console.error('Failed to add album to list:', error.response?.data || error);
-      setError('Failed to add album to list: ' + (error.response?.data?.error || error.message));
+      console.error(
+        "Failed to add album to list:",
+        error.response?.data || error
+      );
+      setError(
+        "Failed to add album to list: " +
+          (error.response?.data?.error || error.message)
+      );
     }
   };
 
   // Helper function to safely get album image URL
   const getAlbumImageUrl = (albumData) => {
-    console.log('Getting image URL for:', albumData); // Debug log
-    
+    console.log("Getting image URL for:", albumData); // Debug log
+
     // If no album data, return default
-    if (!albumData) return '/default-album-cover.png';
-    
+    if (!albumData) return "/default-album-cover.png";
+
     // For search results (Spotify format)
     if (albumData.images && albumData.images.length > 0) {
       return albumData.images[0].url;
     }
-    
+
     // For favorite albums (your backend format)
     if (albumData.image_url) {
       return albumData.image_url;
     }
-    
+
     // Default fallback
-    return '/default-album-cover.png';
+    return "/default-album-cover.png";
   };
 
   // Helper function to safely get album name
   const getAlbumName = (albumData) => {
-    if (!albumData) return 'Unknown Album';
-    return albumData.name || 'Unknown Album';
+    if (!albumData) return "Unknown Album";
+    return albumData.name || "Unknown Album";
   };
 
   // Helper function to safely get artist name
   const getArtistName = (albumData) => {
-    if (!albumData) return 'Unknown Artist';
-    
+    if (!albumData) return "Unknown Artist";
+
     // For search results (Spotify format)
     if (albumData.artists && albumData.artists.length > 0) {
       return albumData.artists[0].name;
     }
-    
+
     // For favorite albums (your backend format)
-    return albumData.artist || 'Unknown Artist';
+    return albumData.artist || "Unknown Artist";
   };
 
   const closeModal = (e, setter) => {
@@ -324,7 +359,10 @@ function Profile() {
           <div className="profile-avatar">
             <img src={profile?.avatar_url || defaultAvatar} alt="Profile" />
           </div>
-          <button className="avatar-edit-button" onClick={() => document.getElementById('avatar-upload').click()}>
+          <button
+            className="avatar-edit-button"
+            onClick={() => document.getElementById("avatar-upload").click()}
+          >
             <Pencil size={16} />
           </button>
           <input
@@ -332,10 +370,10 @@ function Profile() {
             id="avatar-upload"
             onChange={handleAvatarChange}
             accept="image/*"
-            style={{ display: 'none' }}
+            style={{ display: "none" }}
           />
         </div>
-        
+
         <div className="profile-info">
           <div className="username-container">
             <h1 className="profile-username">{profile?.username}</h1>
@@ -355,14 +393,17 @@ function Profile() {
             ) : (
               <>
                 <p className="bio-text">{profile?.bio || "No bio yet"}</p>
-                <button className="bio-edit-button" onClick={() => setEditing(true)}>
+                <button
+                  className="bio-edit-button"
+                  onClick={() => setEditing(true)}
+                >
                   <Pencil size={16} />
                 </button>
               </>
             )}
           </div>
         </div>
-        
+
         <div className="profile-stats">
           <div className="stat-item">
             <div className="stat-value">{stats.followers}</div>
@@ -401,7 +442,9 @@ function Profile() {
               </div>
               <div className="stat-info">
                 <h3>Average Rating</h3>
-                <p className="stat-value">{stats.averageRating?.toFixed(1) || '0.0'} ★</p>
+                <p className="stat-value">
+                  {stats.averageRating?.toFixed(1) || "0.0"} ★
+                </p>
               </div>
             </div>
             <div className="stat-card">
@@ -410,7 +453,7 @@ function Profile() {
               </div>
               <div className="stat-info">
                 <h3>Most Logged Artist</h3>
-                <p className="stat-value">{stats.topArtist || 'None yet'}</p>
+                <p className="stat-value">{stats.topArtist || "None yet"}</p>
               </div>
             </div>
             <div className="stat-card">
@@ -419,7 +462,7 @@ function Profile() {
               </div>
               <div className="stat-info">
                 <h3>Most Common Genre</h3>
-                <p className="stat-value">{stats.topGenre || 'None yet'}</p>
+                <p className="stat-value">{stats.topGenre || "None yet"}</p>
               </div>
             </div>
           </div>
@@ -434,20 +477,35 @@ function Profile() {
               Recent Reviews
             </h2>
             {logs
-              .filter(log => log.review)
+              .filter((log) => log.review)
               .slice(0, 3)
-              .map(log => (
+              .map((log) => (
                 <div key={log.id} className="review-item">
-                  <img src={log.album.image_url || '/default-album-cover.png'} alt={log.album.name} className="review-album-review" />
+                  <img
+                    src={log.album.image_url || "/default-album-cover.png"}
+                    alt={log.album.name}
+                    className="review-album-review"
+                  />
                   <div>
                     <h3>{log.album.name}</h3>
-                    <div className="rating">
+                    <div className="rating" data-rating={log.rating}>
                       {[...Array(5)].map((_, index) => (
-                        <span key={index} className={index < log.rating ? "star filled" : "star"}>
+                        <span
+                          key={index}
+                          className={`star ${
+                            4 - index < log.rating ? "filled" : ""
+                          }`}
+                        >
                           ★
                         </span>
                       ))}
                     </div>
+                    {log.favorite_song && (
+                      <p className="favorite-song">
+                        <span className="label">Favorite Song:</span>{" "}
+                        {log.favorite_song}
+                      </p>
+                    )}
                   </div>
                   <div className="review-content">
                     {log.review && <p className="review-text">{log.review}</p>}
@@ -479,7 +537,9 @@ function Profile() {
                     layout
                   >
                     <img
-                      src={favorite.album.image_url || '/default-album-cover.png'}
+                      src={
+                        favorite.album.image_url || "/default-album-cover.png"
+                      }
                       alt={`${favorite.album.name} by ${favorite.album.artist}`}
                       className="album-cover"
                     />
@@ -490,7 +550,9 @@ function Profile() {
                     <div className="album-actions">
                       <motion.button
                         className="remove-favorite"
-                        onClick={() => handleRemoveFavorite(favorite.album.spotify_id)}
+                        onClick={() =>
+                          handleRemoveFavorite(favorite.album.spotify_id)
+                        }
                       >
                         <X size={16} />
                       </motion.button>
@@ -507,11 +569,9 @@ function Profile() {
                   </motion.div>
                 ))
               ) : (
-                <div className="no-favorites">
-                  No favorite albums yet
-                </div>
+                <div className="no-favorites">No favorite albums yet</div>
               )}
-              
+
               {favoriteAlbums.length < 4 && (
                 <motion.button
                   key="add-favorite-button"
@@ -534,19 +594,34 @@ function Profile() {
               <Scroll size={24} />
               Your Lists
             </h2>
-            <button 
+            <motion.button
               className="create-list-button"
               onClick={() => setShowCreateList(true)}
+              whileHover={{
+                scale: 1.05,
+                backgroundColor: "var(--color-primary-dark)",
+              }}
+              whileTap={{ scale: 0.95 }}
+              transition={{
+                duration: 0.2,
+                ease: "easeOut",
+              }}
             >
-              <Plus size={20} />
+              <motion.div
+                initial={{ rotate: 0 }}
+                whileHover={{ rotate: 90 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Plus size={20} />
+              </motion.div>
               Create List
-            </button>
+            </motion.button>
           </div>
 
           <div className="lists-grid">
-            {lists.map(list => (
-              <motion.div 
-                key={list.id} 
+            {lists.map((list) => (
+              <motion.div
+                key={list.id}
                 className="list-card"
                 layout
                 initial={{ opacity: 0, y: 20 }}
@@ -556,24 +631,31 @@ function Profile() {
               >
                 <h3>{list.title}</h3>
                 <p>{list.description}</p>
-                
+
                 {/* Album Preview Section */}
                 <div className="list-preview">
-                  {list.albums && list.albums.slice(0, 3).map((album) => (
-                    <img
-                      key={album.id}
-                      src={album.image_url || '/default-album-cover.png'}
-                      alt={album.name}
-                      className="preview-album"
-                      onError={(e) => {
-                        e.target.src = "/default-album-cover.png";
-                      }}
-                    />
-                  ))}
+                  {list.albums &&
+                    list.albums.slice(0, 3).map((album) => (
+                      <img
+                        key={album.id}
+                        src={album.image_url || "/default-album-cover.png"}
+                        alt={album.name}
+                        className="preview-album"
+                        onError={(e) => {
+                          e.target.src = "/default-album-cover.png";
+                        }}
+                      />
+                    ))}
                   {/* Add placeholder albums if less than 3 albums */}
-                  {list.albums && [...Array(Math.max(0, 3 - list.albums.length))].map((_, i) => (
-                    <div key={`placeholder-${i}`} className="preview-album-placeholder" />
-                  ))}
+                  {list.albums &&
+                    [...Array(Math.max(0, 3 - list.albums.length))].map(
+                      (_, i) => (
+                        <div
+                          key={`placeholder-${i}`}
+                          className="preview-album-placeholder"
+                        />
+                      )
+                    )}
                 </div>
 
                 <div className="list-meta">
@@ -595,7 +677,10 @@ function Profile() {
       </div>
 
       {error && (
-        <div className="error-message" style={{ color: 'red', marginTop: '10px' }}>
+        <div
+          className="error-message"
+          style={{ color: "red", marginTop: "10px" }}
+        >
           {error}
         </div>
       )}
@@ -646,7 +731,7 @@ function Profile() {
                   <div className="loading">Searching...</div>
                 ) : Array.isArray(searchResults) && searchResults.length > 0 ? (
                   searchResults
-                    .filter(album => album && album.id)
+                    .filter((album) => album && album.id)
                     .map((album) => (
                       <div
                         key={`search-${album.id}-${Date.now()}`}
@@ -730,7 +815,9 @@ function Profile() {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="list-description">Description (optional)</label>
+                  <label htmlFor="list-description">
+                    Description (optional)
+                  </label>
                   <textarea
                     id="list-description"
                     value={newListDescription}
@@ -776,7 +863,7 @@ function Profile() {
               </div>
 
               <div className="lists-selection">
-                {lists.map(list => (
+                {lists.map((list) => (
                   <button
                     key={list.id}
                     className="list-select-button"
@@ -786,7 +873,7 @@ function Profile() {
                     <span>{list.album_count || 0} albums</span>
                   </button>
                 ))}
-                
+
                 {lists.length === 0 && (
                   <p className="no-lists">
                     You haven't created any lists yet. Create one first!

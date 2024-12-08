@@ -19,11 +19,11 @@ class Profile(models.Model):
 
 class Album(models.Model):
     spotify_id = models.CharField(max_length=255, unique=True)
-    name = models.CharField(max_length=255)
-    artist = models.CharField(max_length=255)
-    image_url = models.URLField()
-    release_date = models.DateField()
-    external_url = models.URLField(blank=True, null=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    artist = models.CharField(max_length=255, blank=True, null=True)
+    image_url = models.URLField(max_length=500, blank=True, null=True)
+    release_date = models.DateField(null=True, blank=True)
+    external_url = models.URLField(max_length=500, default='', blank=True)
     genres = models.CharField(max_length=200, blank=True, null=True)
     
     average_rating = models.DecimalField(
@@ -37,7 +37,9 @@ class Album(models.Model):
         ordering = ['-release_date']
 
     def __str__(self):
-        return f"{self.name} by {self.artist}"
+        artist_name = self.artist or 'Unknown Artist'
+        album_name = self.name or 'Untitled Album'
+        return f"{album_name} by {artist_name}"
 
 class Log(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -49,7 +51,7 @@ class Log(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     listen_date = models.DateField(null=True, blank=True)
-    favorite_tracks = models.TextField(blank=True, null=True)
+    favorite_song = models.CharField(max_length=255, blank=True, null=True)
     relisten = models.BooleanField(default=False)
 
     class Meta:
@@ -82,17 +84,17 @@ class List(models.Model):
         ordering = ['-created_at']
 
 class ListAlbum(models.Model):
-    list = models.ForeignKey('List', on_delete=models.CASCADE, related_name='albums')
+    list = models.ForeignKey(List, related_name='albums', on_delete=models.CASCADE)
     spotify_id = models.CharField(max_length=255)
     name = models.CharField(max_length=255)
     artist = models.CharField(max_length=255)
     image_url = models.URLField(max_length=500, blank=True)
-    release_date = models.CharField(max_length=50, blank=True)
+    release_date = models.DateField(null=True, blank=True)
     external_url = models.URLField(max_length=500, blank=True)
-    added_at = models.DateTimeField(auto_now_add=True)
+    rank = models.IntegerField(null=True, blank=True)
 
     class Meta:
-        unique_together = ['list', 'spotify_id']
+        ordering = ['rank']
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):

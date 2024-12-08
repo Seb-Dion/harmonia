@@ -164,7 +164,7 @@ function Login() {
               <AnimatePresence>
                 <motion.div
                   key="username-input"
-                  className="form-group"
+                  className="login-content"
                   variants={formGroupVariants}
                   initial="hidden"
                   animate="visible"
@@ -179,13 +179,14 @@ function Login() {
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="Username"
                       required
+                      className="form-control"
                     />
                   </div>
                 </motion.div>
 
                 <motion.div
                   key="password-input"
-                  className="form-group"
+                  className="login-content"
                   variants={formGroupVariants}
                   initial="hidden"
                   animate="visible"
@@ -200,6 +201,7 @@ function Login() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Password"
                       required
+                      className="form-control"
                     />
                   </div>
                 </motion.div>

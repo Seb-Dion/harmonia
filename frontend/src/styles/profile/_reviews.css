@@ -1,113 +1,203 @@
-@import '../../vars.css';
+@import "../../vars.css";
 
 .reviews-container {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .review-card {
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: 1.5rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
 }
 
 .review-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .review-album-cover {
-    width: 60px;
-    height: 60px;
-    border-radius: var(--radius-sm);
-    object-fit: cover;
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
 }
 
 .review-album-info {
-    flex: 1;
+  flex: 1;
 }
 
 .review-album-title {
-    font-weight: 600;
-    margin: 0;
-    color: var(--color-text);
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text);
 }
 
 .review-album-artist {
-    font-size: 0.9rem;
-    color: var(--color-text-muted);
-    margin: 0.25rem 0 0 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  margin: 0.25rem 0 0 0;
 }
 
 .review-rating {
-    display: flex;
-    gap: 2px;
-    color: var(--color-primary);
-    margin: 0.5rem 0;
+  display: flex;
+  gap: 2px;
+  color: var(--color-primary);
+  margin: 0.5rem 0;
 }
 
 .review-text {
-    color: var(--color-text);
-    line-height: 1.6;
-    margin: 0;
+  color: var(--color-text);
+  line-height: 1.6;
+  margin: 0;
 }
 
 .recent-reviews {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .review-item {
-    display: grid;
-    grid-template-columns: 60px 1fr;
-    gap: 1rem;
-    padding: 1rem;
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    color: var(--color-text);
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
 }
 
 .review-album-review {
-    width: 60px;
-    height: 60px;
-    border-radius: var(--radius-sm);
-    object-fit: cover;
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
 }
 
 .review-content {
-    grid-column: 1 / -1;
-    margin-top: 0.5rem;
+  grid-column: 1 / -1;
+  margin-top: 0.5rem;
 }
 
 .rating {
-    display: flex;
-    gap: 2px;
-    margin: 0.25rem 0;
+  display: flex;
+  gap: 2px;
+  margin: 0.25rem 0;
+  justify-content: flex-start;
 }
 
 .star {
-    color: var(--color-text-muted);
+  color: #666;
+  line-height: 1;
+  display: flex;
+  align-items: center;
 }
 
 .star.filled {
-    color: var(--color-primary);
+  color: var(--color-primary);
 }
 
+/* Color all filled stars based on the rating */
+.rating[data-rating="5"] .star.filled {
+  color: #ab68ff;
+} /* Purple - 5 stars */
+.rating[data-rating="4"] .star.filled {
+  color: #19c37d;
+} /* Green - 4 stars */
+.rating[data-rating="3"] .star.filled {
+  color: #eab308;
+} /* Yellow - 3 stars */
+.rating[data-rating="2"] .star.filled {
+  color: #e06c2b;
+} /* Orange - 2 stars */
+.rating[data-rating="1"] .star.filled {
+  color: #ef4444;
+} /* Red - 1 star */
+
 .review-text {
-    color: var(--color-text);
-    font-size: 0.9rem;
-    line-height: 1.5;
-    margin: 0;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
 }
 
 .review-date {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-    margin: 0.5rem 0 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0.5rem 0 0 0;
+}
+
+.favorite-song {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  margin: 0.5rem 0;
+}
+
+.favorite-song .label {
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+select#favoriteSong {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 1rem;
+}
+
+select#favoriteSong:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+/* Make the selector more specific for review ratings */
+.review-item .rating,
+.recent-reviews .rating {
+  display: flex;
+  gap: 2px;
+  margin: 0.25rem 0;
+  justify-content: flex-start;
+}
+
+.review-item .star,
+.recent-reviews .star {
+  color: #666;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* Update the color styles with more specific selectors */
+.review-item .rating[data-rating="5"] .star.filled,
+.recent-reviews .rating[data-rating="5"] .star.filled {
+  color: #ab68ff;
+}
+
+.review-item .rating[data-rating="4"] .star.filled,
+.recent-reviews .rating[data-rating="4"] .star.filled {
+  color: #19c37d;
+}
+
+.review-item .rating[data-rating="3"] .star.filled,
+.recent-reviews .rating[data-rating="3"] .star.filled {
+  color: #eab308;
+}
+
+.review-item .rating[data-rating="2"] .star.filled,
+.recent-reviews .rating[data-rating="2"] .star.filled {
+  color: #e06c2b;
+}
+
+.review-item .rating[data-rating="1"] .star.filled,
+.recent-reviews .rating[data-rating="1"] .star.filled {
+  color: #ef4444;
 }

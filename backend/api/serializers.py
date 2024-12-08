@@ -75,11 +75,7 @@ class FavoriteAlbumSerializer(serializers.ModelSerializer):
 class LogSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     album = AlbumSerializer(read_only=True)
-    album_id = serializers.PrimaryKeyRelatedField(
-        queryset=Album.objects.all(),
-        write_only=True,
-        source='album'
-    )
+    album_id = serializers.CharField(write_only=True)
 
     class Meta:
         model = Log
@@ -93,19 +89,31 @@ class LogSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'listen_date',
-            'favorite_tracks',
+            'favorite_song',
             'relisten'
         ]
-        read_only_fields = ['created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'user', 'album']
 
     def validate_rating(self, value):
         if not 1 <= value <= 5:
             raise serializers.ValidationError("Rating must be between 1 and 5")
         return value
 
+    def validate(self, data):
+        # Additional validation if needed
+        return data
+
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)
+        # Remove album_id as it's handled in the view
+        validated_data.pop('album_id', None)
+        
+        # The user and album will be provided by the view
+        return Log.objects.create(**validated_data)
+
+    def to_representation(self, instance):
+        # Customize the output if needed
+        representation = super().to_representation(instance)
+        return representation
 
 # Profile Serializer
 class ProfileSerializer(serializers.ModelSerializer):
@@ -157,7 +165,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 class ListAlbumSerializer(serializers.ModelSerializer):
     class Meta:
         model = ListAlbum
-        fields = ['id', 'spotify_id', 'name', 'artist', 'image_url', 'release_date', 'external_url', 'list']
+        fields = ['id', 'spotify_id', 'name', 'artist', 'image_url', 'release_date', 'external_url', 'list', 'rank']
         read_only_fields = ['id']
 
 # List Serializer

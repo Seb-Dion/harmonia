@@ -15,7 +15,9 @@ from .views import (
     register_user,
     ListViewSet,
     get_trending_albums,
-    add_album_to_list
+    add_album_to_list,
+    get_album_tracks,
+    update_album_ranks
 )
 
 router = DefaultRouter()
@@ -50,4 +52,10 @@ urlpatterns = [
 
     # Add album to list
     path('lists/<int:list_id>/add_album/', add_album_to_list, name='add-album-to-list'),
+
+    # Tracks endpoint
+    path('spotify/tracks/<str:spotify_id>/', get_album_tracks, name='album-tracks'),
+
+    # Update album ranks
+    path('lists/<int:list_id>/update_ranks/', update_album_ranks, name='update-album-ranks'),
 ]

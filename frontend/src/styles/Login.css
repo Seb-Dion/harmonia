@@ -99,7 +99,7 @@
 }
 
 .login-content {
-    padding: 2rem;
+    padding: 1.5rem;
 }
 
 .login-content h2 {
@@ -117,10 +117,6 @@
     font-family: var(--font-body);
 }
 
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
 .input-wrapper {
     position: relative;
     display: flex;
@@ -133,7 +129,7 @@
     color: var(--color-text-muted);
 }
 
-input {
+.login-content .input-wrapper input {
     width: 100%;
     padding: 1rem 1rem 1rem 3rem;
     background: var(--color-bg);

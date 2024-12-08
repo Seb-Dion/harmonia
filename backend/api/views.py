@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
-from django.db.models import Avg
+from django.db.models import Avg, Count
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from django.conf import settings
@@ -19,7 +19,7 @@ from .serializers import (
     ListSerializer
 )
 from rest_framework.parsers import MultiPartParser, FormParser
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.db import IntegrityError
 from django.contrib.auth.models import User
 from rest_framework import generics
@@ -50,8 +50,40 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         serializer = self.get_serializer(instance)
         data = serializer.data
         
-        # Log the data being sent
-        print("Profile data being sent:", data)
+        # Add additional stats
+        logs = Log.objects.filter(user=request.user)
+        
+        # Calculate last 30 days logs
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        last_month_logs = logs.filter(created_at__gte=thirty_days_ago).count()
+        
+        # Calculate average rating
+        avg_rating = logs.aggregate(Avg('rating'))['rating__avg']
+        
+        # Get most logged artist
+        artist_counts = logs.values('album__artist').annotate(
+            count=Count('album__artist')
+        ).order_by('-count')
+        top_artist = artist_counts[0]['album__artist'] if artist_counts else None
+        
+        # Get most common genre
+        genre_counts = {}
+        for log in logs:
+            if log.album.genres:
+                genres = log.album.genres.split(',')
+                for genre in genres:
+                    genre = genre.strip()
+                    if genre:
+                        genre_counts[genre] = genre_counts.get(genre, 0) + 1
+        
+        top_genre = max(genre_counts.items(), key=lambda x: x[1])[0] if genre_counts else None
+        
+        data.update({
+            'lastMonth': last_month_logs,
+            'averageRating': round(avg_rating, 1) if avg_rating else 0,
+            'topArtist': top_artist,
+            'topGenre': top_genre or 'None yet'
+        })
         
         return Response(data)
 
@@ -205,14 +237,53 @@ class LogAlbumView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = LogSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            # Add user to request data
+            data = request.data.copy()
+            
+            # Get or create the album first
+            album_id = data.get('album_id')
+            try:
+                album = Album.objects.get(spotify_id=album_id)
+            except Album.DoesNotExist:
+                return Response(
+                    {'error': 'Album not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Create the log with the user
+            serializer = LogSerializer(
+                data=data,
+                context={'request': request}
+            )
+            
+            if serializer.is_valid():
+                log = serializer.save(user=request.user, album=album)
+                
+                # Update album stats
+                album.total_logs += 1
+                logs = Log.objects.filter(album=album)
+                album.average_rating = logs.aggregate(Avg('rating'))['rating__avg']
+                album.save()
+                
+                return Response(
+                    LogSerializer(log).data,
+                    status=status.HTTP_201_CREATED
+                )
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        except Exception as e:
+            print(f"Error creating log: {str(e)}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def get(self, request):
-        logs = Log.objects.filter(user=request.user)
+        logs = Log.objects.filter(user=request.user).select_related('album')
         serializer = LogSerializer(logs, many=True)
         return Response(serializer.data)
 
@@ -462,33 +533,78 @@ def add_album_to_list(request, list_id):
         list_obj = List.objects.get(id=list_id, user=request.user)
         album_data = request.data
         
-        # Create or get the Album instance
-        album, created = Album.objects.get_or_create(
-            spotify_id=album_data['spotify_id'],
-            defaults={
-                'name': album_data['name'],
-                'artist': album_data['artist'],
-                'image_url': album_data['image_url'],
-                'release_date': album_data['release_date'],
-                'external_url': album_data.get('external_url', '')
-            }
-        )
+        # Get the next rank (highest current rank + 1)
+        next_rank = ListAlbum.objects.filter(list=list_obj).count() + 1
         
-        # Create a ListAlbum instance
-        list_album, created = ListAlbum.objects.get_or_create(
+        # Check if album already exists in the list
+        existing_album = ListAlbum.objects.filter(
             list=list_obj,
-            spotify_id=album.spotify_id,
-            defaults={
-                'name': album.name,
-                'artist': album.artist,
-                'image_url': album.image_url,
-                'release_date': album.release_date,
-                'external_url': album.external_url
-            }
+            spotify_id=album_data['spotify_id']
+        ).first()
+        
+        if existing_album:
+            return Response(
+                {'message': 'Album already exists in this list'},
+                status=status.HTTP_200_OK
+            )
+        
+        # Create the ListAlbum instance with rank
+        list_album = ListAlbum.objects.create(
+            list=list_obj,
+            spotify_id=album_data['spotify_id'],
+            name=album_data['name'],
+            artist=album_data['artist'],
+            image_url=album_data.get('image_url', ''),
+            release_date=album_data.get('release_date'),
+            external_url=album_data['external_url'],
+            rank=next_rank
         )
         
-        return Response({'message': 'Album added to list successfully'})
-    except List.DoesNotExist:
-        return Response({'error': 'List not found'}, status=404)
+        return Response({
+            'message': 'Album added to list successfully',
+            'list_album': ListAlbumSerializer(list_album).data
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        print(f"Error adding album to list: {str(e)}")
+        return Response(
+            {'error': str(e)}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_album_tracks(request, spotify_id):
+    try:
+        spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(
+            client_id=settings.SPOTIFY_CLIENT_ID,
+            client_secret=settings.SPOTIFY_CLIENT_SECRET
+        ))
+        
+        album_tracks = spotify.album_tracks(spotify_id)
+        return Response({"tracks": album_tracks['items']})
     except Exception as e:
         return Response({'error': str(e)}, status=400)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_album_ranks(request, list_id):
+    try:
+        list_obj = List.objects.get(id=list_id, user=request.user)
+        albums_data = request.data  # Expect array of {id: X, rank: Y}
+        
+        for album_data in albums_data:
+            album = ListAlbum.objects.get(
+                id=album_data['id'],
+                list=list_obj
+            )
+            album.rank = album_data['rank']
+            album.save()
+            
+        return Response({'message': 'Rankings updated successfully'})
+        
+    except Exception as e:
+        return Response(
+            {'error': str(e)}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )

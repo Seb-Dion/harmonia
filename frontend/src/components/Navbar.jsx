@@ -1,5 +1,5 @@
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Search, User, LogOut } from 'lucide-react';
+import { Home, User, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
 import '../styles/Navbar.css';
 
@@ -101,8 +101,8 @@ function Navbar() {
                             to="/" 
                             className={`navbar-link ${location.pathname === '/' ? 'active' : ''}`}
                         >
-                            <Search size={20} />
-                            <span>Search</span>
+                            <Home size={20} />
+                            <span>Home</span>
                         </Link>
                     </motion.div>
                 </motion.div>

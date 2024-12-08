@@ -1,19 +1,30 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Plus, History, Star, Disc, TrendingUp, Clock, Award, X, Scroll } from 'lucide-react';
-import api from '../api/api';
-import '../styles/Home.css';
-import { ACCESS_TOKEN } from '../constants';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Search,
+  Plus,
+  History,
+  Star,
+  Disc,
+  TrendingUp,
+  Clock,
+  Award,
+  X,
+  Scroll,
+} from "lucide-react";
+import api from "../api/api";
+import "../styles/Home.css";
+import { ACCESS_TOKEN } from "../constants";
+import { AnimatePresence, motion } from "framer-motion";
 
 function Home() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [recentLogs, setRecentLogs] = useState([]);
   const [userStats, setUserStats] = useState(null);
-  const [activeSection, setActiveSection] = useState('discover');
+  const [activeSection, setActiveSection] = useState("discover");
   const [activeSearch, setActiveSearch] = useState([]);
   const [trendingAlbums, setTrendingAlbums] = useState([]);
   const navigate = useNavigate();
@@ -21,7 +32,7 @@ function Home() {
   useEffect(() => {
     const token = localStorage.getItem(ACCESS_TOKEN);
     if (!token) {
-      navigate('/login');
+      navigate("/login");
       return;
     }
     fetchInitialData();
@@ -30,13 +41,13 @@ function Home() {
   const fetchInitialData = async () => {
     try {
       const [logsResponse, statsResponse] = await Promise.all([
-        api.get('api/logs/'),
-        api.get('api/stats/')
+        api.get("api/logs/"),
+        api.get("api/stats/"),
       ]);
       setRecentLogs(logsResponse.data);
       setUserStats(statsResponse.data);
     } catch (error) {
-      console.error('Error fetching initial data:', error);
+      console.error("Error fetching initial data:", error);
     }
   };
 
@@ -45,89 +56,95 @@ function Home() {
     if (!searchQuery.trim()) return;
 
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      const response = await api.get(`api/spotify/search/?q=${encodeURIComponent(searchQuery)}&limit=50`);
+      const response = await api.get(
+        `api/spotify/search/?q=${encodeURIComponent(searchQuery)}&limit=50`
+      );
       if (response.data.tracks?.items) {
-        const formattedResults = response.data.tracks.items.map(track => ({
+        const formattedResults = response.data.tracks.items.map((track) => ({
           spotify_id: track.album.id,
           name: track.album.name,
           artist: track.artists[0].name,
-          image_url: track.album.images[0]?.url || '',
-          release_date: track.album.release_date
+          image_url: track.album.images[0]?.url || "",
+          release_date: track.album.release_date,
         }));
 
         const uniqueAlbums = Array.from(
-          new Map(formattedResults.map(album => [album.spotify_id, album])).values()
+          new Map(
+            formattedResults.map((album) => [album.spotify_id, album])
+          ).values()
         );
         setSearchResults(uniqueAlbums);
       }
     } catch (error) {
-      setError('Failed to search albums. Please try again.');
+      setError("Failed to search albums. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = async (e) => {
+  const handleChange = async (e) => {
     const value = e.target.value;
     setSearchQuery(value);
 
-    if (value === '') {
+    if (value === "") {
       setActiveSearch([]);
       return;
     }
 
     try {
-      const response = await api.get(`api/spotify/search/?q=${encodeURIComponent(value)}&limit=8`);
+      const response = await api.get(
+        `api/spotify/search/?q=${encodeURIComponent(value)}&limit=8`
+      );
       if (response.data.tracks?.items) {
-        const suggestions = response.data.tracks.items.map(track => ({
+        const suggestions = response.data.tracks.items.map((track) => ({
           id: track.album.id,
           name: track.album.name,
-          artist: track.artists[0].name
+          artist: track.artists[0].name,
         }));
         setActiveSearch(suggestions);
       }
     } catch (error) {
-      console.error('Search error:', error);
+      console.error("Search error:", error);
       setActiveSearch([]);
     }
   };
 
   const fetchTrendingAlbums = async () => {
     try {
-      console.log('Fetching trending albums...');
-      const response = await api.get('api/trending-albums/');
-      console.log('Response:', response.data);
+      console.log("Fetching trending albums...");
+      const response = await api.get("api/trending-albums/");
+      console.log("Response:", response.data);
       setTrendingAlbums(response.data);
     } catch (error) {
-      console.error('Error fetching trending albums:', error);
-      console.error('Error response:', error.response?.data);
+      console.error("Error fetching trending albums:", error);
+      console.error("Error response:", error.response?.data);
     }
   };
 
   useEffect(() => {
-    if (activeSection === 'trending') {
+    if (activeSection === "trending") {
       fetchTrendingAlbums();
     }
   }, [activeSection]);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       y: 0,
-      transition: { staggerChildren: 0.1 }
-    }
+      transition: { staggerChildren: 0.1 },
+    },
   };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
+    visible: { opacity: 1, y: 0 },
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="home-container"
       initial="hidden"
       animate="visible"
@@ -160,43 +177,43 @@ function Home() {
           <Award className="stat-icon" />
           <div className="stat-content">
             <h3>Top Genre</h3>
-            <p>{userStats?.top_genre || 'N/A'}</p>
+            <p>{userStats?.top_genre || "N/A"}</p>
           </div>
         </div>
       </motion.section>
 
       {/* Navigation Tabs */}
       <motion.nav className="section-tabs" variants={itemVariants}>
-        <button 
-          className={activeSection === 'discover' ? 'active' : ''}
-          onClick={() => setActiveSection('discover')}
+        <button
+          className={activeSection === "discover" ? "active" : ""}
+          onClick={() => setActiveSection("discover")}
         >
           Discover
         </button>
-        <button 
-          className={activeSection === 'recent' ? 'active' : ''}
-          onClick={() => setActiveSection('recent')}
+        <button
+          className={activeSection === "recent" ? "active" : ""}
+          onClick={() => setActiveSection("recent")}
         >
           Recent Activity
         </button>
-        <button 
-          className={activeSection === 'trending' ? 'active' : ''}
-          onClick={() => setActiveSection('trending')}
+        <button
+          className={activeSection === "trending" ? "active" : ""}
+          onClick={() => setActiveSection("trending")}
         >
           Trending
         </button>
       </motion.nav>
 
       <AnimatePresence mode="wait">
-        {activeSection === 'discover' && (
-          <motion.section 
+        {activeSection === "discover" && (
+          <motion.section
             className="discover-section"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
           >
             <div className="hero-section">
-              <motion.h1 
+              <motion.h1
                 className="app-title"
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -204,7 +221,7 @@ function Home() {
               >
                 harmonia
               </motion.h1>
-              <motion.p 
+              <motion.p
                 className="app-subtitle"
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -215,29 +232,36 @@ function Home() {
             </div>
 
             <form onSubmit={handleSearch} className="search-form">
-              <div className="search-input-container">
-                <input 
-                  type="search" 
-                  placeholder="Search for albums..." 
-                  className="search-input"
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  value={searchQuery}
-                />
-                <button 
-                  type="submit"
-                  className="search-icon-button"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <motion.div 
-                      className="loading-spinner"
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    />
-                  ) : (
-                    <Search size={20} />
-                  )}
-                </button>
+              <div className="search-container">
+                <div className="search-bar">
+                  <input
+                    type="search"
+                    className="search-input"
+                    placeholder="Search for albums..."
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    value={searchQuery}
+                  />
+                  <button
+                    type="submit"
+                    className="search-icon"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <motion.div
+                        className="loading-spinner"
+                        animate={{ rotate: 360 }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
+                      />
+                    ) : (
+                      <Search size={20} />
+                    )}
+                  </button>
+                </div>
+                <div className="glow"></div>
               </div>
             </form>
 
@@ -263,12 +287,27 @@ function Home() {
                       <p>{album.artist}</p>
                     </div>
                     <motion.button
-                      onClick={() => navigate('/log-album', { state: { album } })}
+                      onClick={() =>
+                        navigate("/log-album", { state: { album } })
+                      }
                       className="log-button"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
+                      whileHover={{
+                        scale: 1.05,
+                        backgroundColor: "var(--color-primary-dark)",
+                      }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={{
+                        duration: 0.2,
+                        ease: "easeOut",
+                      }}
                     >
-                      <Plus size={20} />
+                      <motion.div
+                        initial={{ rotate: 0 }}
+                        whileHover={{ rotate: 90 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <Plus size={18} />
+                      </motion.div>
                       Log
                     </motion.button>
                   </motion.div>
@@ -278,8 +317,8 @@ function Home() {
           </motion.section>
         )}
 
-        {activeSection === 'recent' && (
-          <motion.section 
+        {activeSection === "recent" && (
+          <motion.section
             className="recent-activity"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -287,8 +326,8 @@ function Home() {
           >
             <div className="activity-grid">
               {recentLogs.map((log) => (
-                <motion.div 
-                  key={log.id} 
+                <motion.div
+                  key={log.id}
                   className="activity-card"
                   whileHover={{ scale: 1.02 }}
                 >
@@ -318,13 +357,14 @@ function Home() {
           </motion.section>
         )}
 
-        {activeSection === 'trending' && (
-          <motion.section 
+        {activeSection === "trending" && (
+          <motion.section
             className="trending-section"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
           >
+            <h2 className="section-title">Trending Albums</h2>
             <div className="album-grid">
               {trendingAlbums.map((album) => (
                 <motion.div
@@ -343,12 +383,25 @@ function Home() {
                     <p>{album.artist}</p>
                   </div>
                   <motion.button
-                    onClick={() => navigate('/log-album', { state: { album } })}
+                    onClick={() => navigate("/log-album", { state: { album } })}
                     className="log-button"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    whileHover={{
+                      scale: 1.05,
+                      backgroundColor: "var(--color-primary-dark)",
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{
+                      duration: 0.2,
+                      ease: "easeOut",
+                    }}
                   >
-                    <Plus size={20} />
+                    <motion.div
+                      initial={{ rotate: 0 }}
+                      whileHover={{ rotate: 90 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Plus size={18} />
+                    </motion.div>
                     Log
                   </motion.button>
                 </motion.div>
