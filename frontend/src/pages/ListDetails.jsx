@@ -1,10 +1,52 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, X, GripVertical } from "lucide-react";
+import { Plus, Search, X, GripVertical, NotebookPen, Star } from "lucide-react";
+import { Pie } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import api from "../api/api";
 import "../styles/ListDetails.css";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+
+// Register ChartJS components
+ChartJS.register(ArcElement, Tooltip, Legend);
+
+const DraggableAlbum = ({ album, index, isEditMode }) => (
+  <Draggable
+    draggableId={String(index)}
+    index={index}
+    isDragDisabled={!isEditMode}
+  >
+    {(provided, snapshot) => (
+      <div
+        ref={provided.innerRef}
+        {...provided.draggableProps}
+        {...provided.dragHandleProps}
+        className={`album-card ${isEditMode ? "edit-mode" : ""} ${
+          snapshot.isDragging ? "dragging" : ""
+        }`}
+      >
+        <div className="rank-badge">{index + 1}</div>
+        {isEditMode && (
+          <div className="drag-handle">
+            <GripVertical size={20} />
+          </div>
+        )}
+        <img
+          src={album.image_url || "/default-album.png"}
+          alt={album.name}
+          onError={(e) => {
+            e.target.src = "/default-album.png";
+          }}
+        />
+        <div className="album-info">
+          <h3>{album.name}</h3>
+          <p>{album.artist}</p>
+        </div>
+      </div>
+    )}
+  </Draggable>
+);
 
 function ListDetails() {
   const [list, setList] = useState(null);
@@ -16,20 +58,16 @@ function ListDetails() {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [albums, setAlbums] = useState([]);
 
   useEffect(() => {
     const fetchListDetails = async () => {
-      console.log("Fetching list details for ID:", listId);
       try {
         const response = await api.get(`/api/lists/${listId}/`);
-        console.log("List details response:", response.data);
         setList(response.data);
+        setAlbums(response.data.albums || []);
         setLoading(false);
       } catch (error) {
-        console.error(
-          "Error fetching list details:",
-          error.response?.data || error
-        );
         setError(error.response?.data?.error || "Failed to fetch list details");
         setLoading(false);
       }
@@ -37,6 +75,34 @@ function ListDetails() {
 
     fetchListDetails();
   }, [listId]);
+
+  const handleDragEnd = async (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(albums);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    const updatedAlbums = items.map((item, index) => ({
+      ...item,
+      rank: index + 1,
+    }));
+
+    setAlbums(updatedAlbums);
+    setList((prev) => ({ ...prev, albums: updatedAlbums }));
+
+    try {
+      await api.put(
+        `/api/lists/${listId}/update_ranks/`,
+        items.map((item, index) => ({
+          id: parseInt(item.id),
+          rank: index + 1,
+        }))
+      );
+    } catch (error) {
+      console.error("Error updating ranks:", error);
+    }
+  };
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -115,35 +181,134 @@ function ListDetails() {
     }
   };
 
-  const handleDragEnd = async (result) => {
-    if (!result.destination) return;
+  const debugAlbum = (album, index) => {
+    console.log(`Album ${index}:`, {
+      id: album.id,
+      draggableId: `album-${album.id}`,
+      name: album.name,
+      artist: album.artist,
+    });
+  };
 
-    const items = Array.from(list.albums);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+  const handleAddNote = (albumId) => {
+    // Implement note adding functionality
+  };
 
-    // Update local state immediately for smooth UI
-    setList({
-      ...list,
-      albums: items.map((item, index) => ({
-        ...item,
-        rank: index + 1,
-      })),
+  const handleRating = (albumId, rating) => {
+    // Implement rating functionality
+  };
+
+  const getGenreDistribution = (albums) => {
+    console.log("Albums received in getGenreDistribution:", albums);
+
+    // Create a map to count genre occurrences
+    const genreCounts = {};
+    let hasGenres = false;
+
+    albums.forEach((album) => {
+      console.log("Processing album:", album.name, "Genres:", album.genres);
+      if (album.genres) {
+        // Split genres string into array and trim whitespace
+        const genres = album.genres.split(",").map((g) => g.trim());
+
+        genres.forEach((genre) => {
+          if (genre) {
+            // Only count non-empty genres
+            genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+            hasGenres = true;
+          }
+        });
+      }
     });
 
-    // Update backend
-    try {
-      await api.put(
-        `/api/lists/${listId}/update_ranks/`,
-        items.map((item, index) => ({
-          id: item.id,
-          rank: index + 1,
-        }))
-      );
-    } catch (error) {
-      console.error("Error updating ranks:", error);
-      // Optionally revert the state if the backend update fails
+    console.log("Genre counts:", genreCounts);
+
+    // If no genres were found, return default data
+    if (!hasGenres) {
+      return {
+        labels: ["No genre data available"],
+        datasets: [
+          {
+            data: [1],
+            backgroundColor: ["rgba(200, 200, 200, 0.8)"],
+            borderColor: ["rgba(200, 200, 200, 1)"],
+            borderWidth: 1,
+          },
+        ],
+      };
     }
+
+    // Sort genres by count (descending) and take top 5
+    const topGenres = Object.entries(genreCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5);
+
+    console.log("Top genres:", topGenres);
+
+    // Generate colors for each genre
+    const colors = [
+      "rgba(255, 99, 132, 0.8)", // pink
+      "rgba(54, 162, 235, 0.8)", // blue
+      "rgba(255, 206, 86, 0.8)", // yellow
+      "rgba(75, 192, 192, 0.8)", // teal
+      "rgba(153, 102, 255, 0.8)", // purple
+    ];
+
+    const borderColors = colors.map((color) => color.replace("0.8)", "1)"));
+
+    const chartData = {
+      labels: topGenres.map(([genre]) => genre),
+      datasets: [
+        {
+          data: topGenres.map(([, count]) => count),
+          backgroundColor: colors.slice(0, topGenres.length),
+          borderColor: borderColors.slice(0, topGenres.length),
+          borderWidth: 1,
+        },
+      ],
+    };
+
+    console.log("Chart data:", chartData);
+    return chartData;
+  };
+
+  const handleKeyboardNavigation = (e, albumId) => {
+    if (e.key === "Enter" || e.key === " ") {
+      // Handle album selection/expansion
+      e.preventDefault();
+    } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      // Handle moving focus between albums
+      e.preventDefault();
+      const currentIndex = list.albums.findIndex(
+        (album) => album.id === albumId
+      );
+      const nextIndex =
+        e.key === "ArrowUp"
+          ? Math.max(0, currentIndex - 1)
+          : Math.min(list.albums.length - 1, currentIndex + 1);
+
+      document.querySelectorAll(".album-card")[nextIndex]?.focus();
+    }
+  };
+
+  const exportList = (format) => {
+    // Implement export functionality based on format
+    console.log(`Exporting list as ${format}`);
+  };
+
+  const shareList = (platform) => {
+    // Implement sharing functionality
+    console.log(`Sharing list on ${platform}`);
+  };
+
+  const filterByDecade = (decade) => {
+    // Implement decade filtering
+    console.log(`Filtering by decade: ${decade}`);
+  };
+
+  const filterByArtist = (artist) => {
+    // Implement artist filtering
+    console.log(`Filtering by artist: ${artist}`);
   };
 
   if (loading)
@@ -166,25 +331,16 @@ function ListDetails() {
                 : "var(--color-bg-highlight)",
             }}
             whileTap={{ scale: 0.95 }}
-            transition={{
-              duration: 0.2,
-              ease: "easeOut",
-            }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
           >
             {isEditMode ? "Save Rankings" : "Edit Rankings"}
           </motion.button>
           <motion.button
             className="add-album-button"
             onClick={() => setShowSearch(true)}
-            whileHover={{
-              scale: 1.05,
-              backgroundColor: "rgb(157, 78, 221)",
-            }}
+            whileHover={{ scale: 1.05, backgroundColor: "rgb(157, 78, 221)" }}
             whileTap={{ scale: 0.95 }}
-            transition={{
-              duration: 0.2,
-              ease: "easeOut",
-            }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
           >
             <motion.div
               initial={{ rotate: 0 }}
@@ -197,54 +353,24 @@ function ListDetails() {
           </motion.button>
         </div>
       </div>
-      <p>{list.description}</p>
-      {list && (
+      <p className="list-description">{list.description}</p>
+
+      {albums.length > 0 && (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="albums">
+          <Droppable droppableId="albums-list">
             {(provided) => (
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
                 className={`album-grid ${isEditMode ? "edit-mode" : ""}`}
               >
-                {list.albums?.map((album, index) => (
-                  <Draggable
-                    key={album.id.toString()}
-                    draggableId={album.id.toString()}
+                {albums.map((album, index) => (
+                  <DraggableAlbum
+                    key={String(index)}
+                    album={album}
                     index={index}
-                    isDragDisabled={!isEditMode}
-                  >
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className={`album-card ${
-                          isEditMode ? "edit-mode" : ""
-                        } ${snapshot.isDragging ? "dragging" : ""}`}
-                      >
-                        <div className="rank-badge">{index + 1}</div>
-                        {isEditMode && (
-                          <div
-                            className="drag-handle"
-                            {...provided.dragHandleProps}
-                          >
-                            <GripVertical size={20} />
-                          </div>
-                        )}
-                        <img
-                          src={album.image_url || "/default-album.png"}
-                          alt={album.name}
-                          onError={(e) => {
-                            e.target.src = "/default-album.png";
-                          }}
-                        />
-                        <div className="album-info">
-                          <h3>{album.name}</h3>
-                          <p>{album.artist}</p>
-                        </div>
-                      </div>
-                    )}
-                  </Draggable>
+                    isEditMode={isEditMode}
+                  />
                 ))}
                 {provided.placeholder}
               </div>
@@ -315,6 +441,35 @@ function ListDetails() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <div className="list-statistics">
+        <h3 className="list-stats-title">Genre Distribution</h3>
+        <div className="stats-grid">
+          <div className="stat-item-list">
+            {list.albums.length > 0 ? (
+              <div style={{ width: "300px", height: "300px" }}>
+                <Pie
+                  data={getGenreDistribution(list.albums)}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: "bottom",
+                        labels: {
+                          color: "white",
+                        },
+                      },
+                    },
+                  }}
+                />
+              </div>
+            ) : (
+              <p>Add some albums to see genre distribution</p>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

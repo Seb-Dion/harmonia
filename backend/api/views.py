@@ -532,8 +532,9 @@ def add_album_to_list(request, list_id):
     try:
         list_obj = List.objects.get(id=list_id, user=request.user)
         album_data = request.data
+        print("Received album data:", album_data)
         
-        # Get the next rank (highest current rank + 1)
+        # Get the next rank
         next_rank = ListAlbum.objects.filter(list=list_obj).count() + 1
         
         # Check if album already exists in the list
@@ -548,7 +549,29 @@ def add_album_to_list(request, list_id):
                 status=status.HTTP_200_OK
             )
         
-        # Create the ListAlbum instance with rank
+        # Get primary genre from Spotify artist
+        primary_genre = ''
+        try:
+            spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(
+                client_id=settings.SPOTIFY_CLIENT_ID,
+                client_secret=settings.SPOTIFY_CLIENT_SECRET
+            ))
+            
+            # First get the album to find the artist ID
+            album_info = spotify.album(album_data['spotify_id'])
+            if album_info['artists']:
+                # Get the primary artist's genres
+                artist_id = album_info['artists'][0]['id']
+                artist_info = spotify.artist(artist_id)
+                genres = artist_info.get('genres', [])
+                # Only take the first genre if available
+                primary_genre = genres[0] if genres else ''
+                print(f"Found primary genre for artist {artist_info['name']}: {primary_genre}")
+            
+        except Exception as e:
+            print(f"Error fetching artist genre: {str(e)}")
+        
+        # Create the ListAlbum instance with primary genre
         list_album = ListAlbum.objects.create(
             list=list_obj,
             spotify_id=album_data['spotify_id'],
@@ -557,8 +580,11 @@ def add_album_to_list(request, list_id):
             image_url=album_data.get('image_url', ''),
             release_date=album_data.get('release_date'),
             external_url=album_data['external_url'],
+            genres=primary_genre,
             rank=next_rank
         )
+        
+        print(f"Created ListAlbum with primary genre: {list_album.genres}")
         
         return Response({
             'message': 'Album added to list successfully',
@@ -608,3 +634,4 @@ def update_album_ranks(request, list_id):
             {'error': str(e)}, 
             status=status.HTTP_400_BAD_REQUEST
         )
+

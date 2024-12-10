@@ -14,10 +14,6 @@
     transition: transform 0.2s ease;
 }
 
-.stat-item:hover {
-    transform: translateY(-2px);
-}
-
 .stat-value {
     font-size: 1.75rem;
     font-weight: 600;

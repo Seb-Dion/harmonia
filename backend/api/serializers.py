@@ -165,7 +165,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 class ListAlbumSerializer(serializers.ModelSerializer):
     class Meta:
         model = ListAlbum
-        fields = ['id', 'spotify_id', 'name', 'artist', 'image_url', 'release_date', 'external_url', 'list', 'rank']
+        fields = ['id', 'spotify_id', 'name', 'artist', 'image_url', 'release_date', 'external_url', 'list', 'rank', 'genres']
         read_only_fields = ['id']
 
 # List Serializer
